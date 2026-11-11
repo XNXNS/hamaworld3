@@ -1,0 +1,353 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "hw3": {
+      "users": {
+        ".read": "auth != null",
+        ".indexOn": [
+          "points",
+          "level"
+        ],
+        "$key": {
+          ".write": "auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || (!data.exists() && newData.child('uid').val() === auth.uid) || (data.exists() && data.child('uid').val() === auth.uid))",
+          ".validate": "newData.hasChildren(['uid','key','name','num','admin','level','wins','losses','kills','deaths','assists','bans','matches','bestStage','points','updatedAt']) && newData.child('key').val() === $key",
+          "uid": {
+            ".validate": "newData.isString() && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || (!data.exists() && newData.val() === auth.uid) || data.val() === newData.val())"
+          },
+          "key": {
+            ".validate": "newData.isString() && newData.val() === $key"
+          },
+          "name": {
+            ".validate": "newData.isString() && newData.val().toLowerCase() === $key && ((newData.val().matches(/^[가-힣A-Za-z]{2,12}$/) && !newData.val().toLowerCase().contains('admin') && !newData.val().toLowerCase().contains('administrator') && !newData.val().toLowerCase().contains('관리자') && !newData.val().toLowerCase().contains('운영자') && !newData.val().toLowerCase().contains('운영') && !newData.val().toLowerCase().contains('개발자') && !newData.val().toLowerCase().contains('dev') && !newData.val().toLowerCase().contains('developer') && !newData.val().toLowerCase().contains('secret') && !newData.val().toLowerCase().contains('xnxns') && !newData.val().toLowerCase().contains('gm') && !newData.val().toLowerCase().contains('mod') && !newData.val().toLowerCase().contains('root') && !newData.val().toLowerCase().contains('system') && !newData.val().toLowerCase().contains('staff') && !newData.val().toLowerCase().contains('hamaworld') && !newData.val().toLowerCase().contains('하마월드')) || (newData.val().matches(/^[가-힣A-Za-z0-9_]{2,12}$/) && (auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true))))"
+          },
+          "num": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]{1,6}$/) && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || !data.exists() || data.val() === newData.val())"
+          },
+          "admin": {
+            ".validate": "newData.isBoolean() && (newData.val() === false || (auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true)))"
+          },
+          "level": {
+            ".validate": "newData.isNumber() && newData.val() % 1 === 0 && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || (!data.exists() && newData.val() === 1) || (data.exists() && (newData.val() === data.val() || (newData.parent().child('matches').val() === data.parent().child('matches').val() + 1 && newData.val() >= data.val() && newData.val() <= data.val() + 2))))"
+          },
+          "wins": {
+            ".validate": "newData.isNumber() && newData.val() % 1 === 0 && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || (!data.exists() && newData.val() === 0) || (data.exists() && (newData.val() === data.val() || (newData.parent().child('matches').val() === data.parent().child('matches').val() + 1 && newData.val() >= data.val() && newData.val() <= data.val() + 1))))"
+          },
+          "losses": {
+            ".validate": "newData.isNumber() && newData.val() % 1 === 0 && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || (!data.exists() && newData.val() === 0) || (data.exists() && (newData.val() === data.val() || (newData.parent().child('matches').val() === data.parent().child('matches').val() + 1 && newData.val() >= data.val() && newData.val() <= data.val() + 1))))"
+          },
+          "kills": {
+            ".validate": "newData.isNumber() && newData.val() % 1 === 0 && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || (!data.exists() && newData.val() === 0) || (data.exists() && (newData.val() === data.val() || (newData.parent().child('matches').val() === data.parent().child('matches').val() + 1 && newData.val() >= data.val() && newData.val() <= data.val() + 200))))"
+          },
+          "deaths": {
+            ".validate": "newData.isNumber() && newData.val() % 1 === 0 && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || (!data.exists() && newData.val() === 0) || (data.exists() && (newData.val() === data.val() || (newData.parent().child('matches').val() === data.parent().child('matches').val() + 1 && newData.val() >= data.val() && newData.val() <= data.val() + 40))))"
+          },
+          "assists": {
+            ".validate": "newData.isNumber() && newData.val() % 1 === 0 && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || (!data.exists() && newData.val() === 0) || (data.exists() && (newData.val() === data.val() || (newData.parent().child('matches').val() === data.parent().child('matches').val() + 1 && newData.val() >= data.val() && newData.val() <= data.val() + 200))))"
+          },
+          "bestStage": {
+            ".validate": "newData.isNumber() && newData.val() % 1 === 0 && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || (!data.exists() && newData.val() === 0) || (data.exists() && (newData.val() === data.val() || (newData.parent().child('matches').val() === data.parent().child('matches').val() + 1 && newData.val() >= data.val() && newData.val() <= data.val() + 5))))"
+          },
+          "points": {
+            ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= 0 && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || (!data.exists() && newData.val() === 0) || (data.exists() && (newData.val() === data.val() || (newData.parent().child('matches').val() === data.parent().child('matches').val() + 1 && newData.val() >= data.val() - 19 && newData.val() <= data.val() + 25))))"
+          },
+          "matches": {
+            ".validate": "newData.isNumber() && newData.val() % 1 === 0 && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || (!data.exists() && newData.val() === 0) || (data.exists() && (newData.val() === data.val() || (newData.val() === data.val() + 1 && newData.parent().child('updatedAt').val() === now && now - data.parent().child('updatedAt').val() >= 120000))))"
+          },
+          "bans": {
+            ".write": "(auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true))",
+            ".validate": "newData.isNumber() && newData.val() % 1 === 0 && ((auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true)) || (!data.exists() && newData.val() === 0) || newData.val() === data.val())"
+          },
+          "tutorialDone": {
+            ".validate": "newData.isBoolean() && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || data.val() !== true || newData.val() === true)"
+          },
+          "updatedAt": {
+            ".validate": "newData.val() === now"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "admins": {
+        ".read": "(auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true)",
+        "$uid": {
+          ".read": "auth != null && ($uid === auth.uid || (auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true)))",
+          ".write": "(auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true)",
+          ".validate": "newData.val() === true"
+        }
+      },
+      "bans": {
+        ".read": "(auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true))",
+        "$key": {
+          ".read": "auth != null && (root.child('hw3/users/' + $key + '/uid').val() === auth.uid || (auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true)))",
+          ".write": "(auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true))",
+          ".validate": "newData.hasChildren(['days','ts','reason','by']) && newData.child('days').isNumber() && newData.child('days').val() >= 0 && newData.child('days').val() <= 3650 && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || newData.child('days').val() <= 7) && newData.child('ts').val() === now && newData.child('reason').isString() && newData.child('reason').val().length <= 100 && newData.child('by').val() === auth.uid",
+          "days": {
+            ".validate": true
+          },
+          "ts": {
+            ".validate": true
+          },
+          "reason": {
+            ".validate": true
+          },
+          "by": {
+            ".validate": true
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "kicks": {
+        "$uid": {
+          ".read": "auth != null && ($uid === auth.uid || (auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true)))",
+          ".write": "(auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true))",
+          ".validate": "newData.hasChildren(['ts','by','reason']) && newData.child('ts').val() === now && newData.child('by').val() === auth.uid && newData.child('reason').isString() && newData.child('reason').val().length <= 100",
+          "ts": {
+            ".validate": true
+          },
+          "by": {
+            ".validate": true
+          },
+          "reason": {
+            ".validate": true
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "reports": {
+        ".read": "(auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true))",
+        ".indexOn": [
+          "ts",
+          "status"
+        ],
+        "$id": {
+          ".write": "auth != null && ((!data.exists() && newData.child('from').val() === auth.uid) || (data.exists() && (auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true))))",
+          ".validate": "(data.exists() && (auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true))) || (newData.hasChildren(['from','fromKey','target','type','text','ts']) && newData.child('from').val() === auth.uid && root.child('hw3/users/' + newData.child('fromKey').val() + '/uid').val() === auth.uid && newData.child('target').val() !== newData.child('fromKey').val() && root.child('hw3/users/' + newData.child('target').val()).exists() && newData.parent().parent().child('lastReport/' + auth.uid + '/ts').val() === now)",
+          "from": {
+            ".validate": "newData.isString()"
+          },
+          "fromKey": {
+            ".validate": "newData.isString()"
+          },
+          "target": {
+            ".validate": "newData.isString() && newData.val().length <= 12"
+          },
+          "type": {
+            ".validate": "newData.val() === 'troll' || newData.val() === 'abuse' || newData.val() === 'cheat' || newData.val() === 'swear'"
+          },
+          "text": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "ts": {
+            ".validate": "newData.val() === (data.exists() ? data.val() : now)"
+          },
+          "status": {
+            ".validate": "(!data.exists() && newData.val() === 'open') || ((auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true)) && (newData.val() === 'open' || newData.val() === 'done' || newData.val() === 'dismissed'))"
+          },
+          "handledBy": {
+            ".validate": "(auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true)) && newData.val() === auth.uid"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "lastReport": {
+        "$uid": {
+          ".write": "auth != null && $uid === auth.uid",
+          ".validate": "newData.hasChildren(['ts']) && newData.child('ts').val() === now && (!data.exists() || now - data.child('ts').val() >= 60000)",
+          "ts": {
+            ".validate": true
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "active": {
+        "$uid": {
+          ".read": "auth != null && ($uid === auth.uid || (auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true)))",
+          ".write": "auth != null && $uid === auth.uid",
+          ".validate": "newData.hasChildren(['mid','ts']) && newData.child('mid').isString() && newData.child('mid').val().length <= 40 && newData.child('ts').val() === now && (!data.exists() || now - data.child('ts').val() > 1800000)",
+          "mid": {
+            ".validate": true
+          },
+          "ts": {
+            ".validate": true
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "queue": {
+        ".read": "auth != null",
+        "$uid": {
+          ".write": "auth != null && $uid === auth.uid",
+          ".validate": "newData.hasChildren(['name','key','ts']) && newData.child('name').isString() && newData.child('name').val().length <= 14 && newData.child('ts').val() === now && root.child('hw3/users/' + newData.child('key').val() + '/uid').val() === auth.uid && root.child('hw3/users/' + newData.child('key').val() + '/tutorialDone').val() === true && (!root.child('hw3/bans/' + newData.child('key').val()).exists() || root.child('hw3/bans/' + newData.child('key').val() + '/ts').val() + root.child('hw3/bans/' + newData.child('key').val() + '/days').val() * 86400000 <= now) && (!root.child('hw3/active/' + auth.uid).exists() || now - root.child('hw3/active/' + auth.uid + '/ts').val() > 1800000)",
+          "name": {
+            ".validate": true
+          },
+          "key": {
+            ".validate": true
+          },
+          "ts": {
+            ".validate": true
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "openMatches": {
+        ".read": "auth != null",
+        ".indexOn": [
+          "ts"
+        ],
+        "$mid": {
+          ".write": "auth != null && ((!data.exists() && newData.child('host').val() === auth.uid) || (data.exists() && data.child('host').val() === auth.uid) || (auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true)))",
+          ".validate": "newData.hasChildren(['host','ts']) && newData.child('host').isString() && newData.child('ts').val() === (data.exists() ? data.child('ts').val() : now)",
+          "host": {
+            ".validate": true
+          },
+          "ts": {
+            ".validate": true
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "presence": {
+        ".read": "auth != null",
+        "$uid": {
+          ".write": "auth != null && $uid === auth.uid",
+          ".validate": "newData.hasChildren(['name','state','ts']) && newData.child('name').isString() && newData.child('name').val().length <= 14 && (newData.child('state').val() === 'lobby' || newData.child('state').val() === 'match' || newData.child('state').val() === 'tutorial') && newData.child('ts').val() === now",
+          "name": {
+            ".validate": true
+          },
+          "state": {
+            ".validate": true
+          },
+          "ts": {
+            ".validate": true
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "matches": {
+        "$mid": {
+          "players": {
+            ".read": "auth != null && data.child(auth.uid).exists()",
+            "$uid": {
+              ".write": "auth != null && ($uid === auth.uid || (auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true)))",
+              ".validate": "newData.hasChildren(['name','team','slotKey','joinedAt']) && newData.child('name').isString() && newData.child('name').val().length <= 14 && (newData.child('team').val() === 'blue' || newData.child('team').val() === 'red') && newData.child('slotKey').isString() && newData.child('slotKey').val().matches(/^(blue|red)-[0-6]$/) && newData.child('slotKey').val().beginsWith(newData.child('team').val() + '-') && newData.parent().parent().child('slots/' + newData.child('slotKey').val()).val() === $uid && (data.exists() || newData.child('joinedAt').val() === now)",
+              "name": {
+                ".validate": true
+              },
+              "team": {
+                ".validate": true
+              },
+              "slotKey": {
+                ".validate": true
+              },
+              "joinedAt": {
+                ".validate": true
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          },
+          "slots": {
+            ".read": "auth != null",
+            "$s": {
+              ".write": "auth != null && ((!data.exists() && newData.val() === auth.uid && newData.parent().parent().parent().parent().child('openMatches/' + $mid).exists() && newData.parent().parent().parent().parent().child('active/' + auth.uid + '/mid').val() === $mid) || (data.val() === auth.uid && !newData.exists()) || (auth != null && ((auth != null && auth.token.email === 'simonlee2011@naver.com' && auth.token.email_verified === true) || root.child('hw3/admins/' + auth.uid).val() === true)))",
+              ".validate": "newData.isString() && $s.matches(/^(blue|red)-[0-6]$/)"
+            }
+          },
+          "chat": {
+            "all": {
+              ".read": "auth != null && root.child('hw3/matches/' + $mid + '/players/' + auth.uid).exists()",
+              "$id": {
+                ".write": "auth != null && !data.exists() && root.child('hw3/matches/' + $mid + '/players/' + auth.uid).exists()",
+                ".validate": "newData.hasChildren(['uid','name','text','ts']) && newData.child('uid').val() === auth.uid && newData.child('name').isString() && newData.child('name').val().length <= 14 && newData.child('text').isString() && newData.child('text').val().length >= 1 && newData.child('text').val().length <= 100 && newData.child('ts').val() === now",
+                "uid": {
+                  ".validate": true
+                },
+                "name": {
+                  ".validate": true
+                },
+                "text": {
+                  ".validate": true
+                },
+                "ts": {
+                  ".validate": true
+                },
+                "$other": {
+                  ".validate": false
+                }
+              }
+            },
+            "team": {
+              "$team": {
+                ".read": "auth != null && root.child('hw3/matches/' + $mid + '/players/' + auth.uid + '/team').val() === $team",
+                "$id": {
+                  ".write": "auth != null && !data.exists() && root.child('hw3/matches/' + $mid + '/players/' + auth.uid + '/team').val() === $team",
+                  ".validate": "newData.hasChildren(['uid','name','text','ts']) && newData.child('uid').val() === auth.uid && newData.child('name').isString() && newData.child('name').val().length <= 14 && newData.child('text').isString() && newData.child('text').val().length >= 1 && newData.child('text').val().length <= 100 && newData.child('ts').val() === now",
+                  "uid": {
+                    ".validate": true
+                  },
+                  "name": {
+                    ".validate": true
+                  },
+                  "text": {
+                    ".validate": true
+                  },
+                  "ts": {
+                    ".validate": true
+                  },
+                  "$other": {
+                    ".validate": false
+                  }
+                }
+              }
+            }
+          },
+          "state": {
+            ".read": "auth != null && root.child('hw3/matches/' + $mid + '/players/' + auth.uid).exists()",
+            "$uid": {
+              ".write": "auth != null && $uid === auth.uid && root.child('hw3/matches/' + $mid + '/players/' + auth.uid).exists()",
+              ".validate": "newData.hasChildren(['x','z','yaw','hp','ts']) && newData.child('x').isNumber() && newData.child('x').val() >= -60 && newData.child('x').val() <= 60 && newData.child('z').isNumber() && newData.child('z').val() >= -60 && newData.child('z').val() <= 60 && newData.child('yaw').isNumber() && newData.child('hp').isNumber() && newData.child('hp').val() >= 0 && newData.child('hp').val() <= 100 && newData.child('ts').val() === now",
+              "x": {
+                ".validate": true
+              },
+              "z": {
+                ".validate": true
+              },
+              "yaw": {
+                ".validate": true
+              },
+              "hp": {
+                ".validate": true
+              },
+              "ts": {
+                ".validate": true
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

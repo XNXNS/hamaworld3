@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>하마월드 3 - FPS 팀전 (초안)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b1020;color:#fff;font-family:'Malgun Gothic',sans-serif;overflow:hidden}
+.screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:#0b1020;z-index:10;overflow:auto;padding:16px}
+.screen.on{display:flex}
+.card{background:#162044;border:1px solid #2c3d7a;border-radius:14px;padding:20px;margin:8px;min-width:280px;max-width:560px;width:100%}
+h1{margin:0 0 8px}h2{margin:0 0 10px;font-size:18px}
+input,button{font:inherit;padding:10px 12px;border-radius:8px;border:1px solid #3a4d94;background:#0f1836;color:#fff}
+button{background:#3a6df0;border:0;cursor:pointer;font-weight:bold}
+button:hover{background:#5683ff}
+button:disabled{background:#444;cursor:not-allowed}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#err{color:#ff7b7b;min-height:20px;margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{padding:4px 6px;text-align:left;border-bottom:1px solid #22306a}
+.t-inf{color:#7df9ff}.t-imm{color:#c58bff}.t-mas{color:#ffd166}
+#hud{position:fixed;inset:0;pointer-events:none;display:none;z-index:5}
+#cross{position:absolute;left:50%;top:50%;width:var(--cs,6px);height:var(--cs,6px);transform:translate(-50%,-50%);border:1px solid #fff;border-radius:50%;box-shadow:0 0 2px #000,inset 0 0 2px #000}
+#cross::after{content:'';position:absolute;left:50%;top:50%;width:2px;height:2px;margin:-1px;background:#fff;border-radius:50%;box-shadow:0 0 2px #000}
+#hptext,#shtext{position:absolute;left:0;right:0;top:0;text-align:center;font-weight:bold;text-shadow:0 0 4px #000}
+#hptext{font-size:15px;line-height:18px}#shtext{font-size:11px;line-height:12px}
+#hpbar{position:absolute;left:20px;bottom:20px;width:260px;height:22px;background:#0008;border:2px solid #fff;border-radius:6px}
+#hpfill{height:100%;background:#4cd964;width:100%}
+#shbar{position:absolute;left:20px;bottom:48px;width:260px;height:16px;background:#0008;border:2px solid #7ab8ff;border-radius:6px}
+#shfill{height:100%;background:#7ab8ff;width:0}
+#info{position:absolute;left:20px;bottom:72px;font-size:16px;text-shadow:0 0 4px #000}
+#score{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:20px;font-weight:bold;text-shadow:0 0 6px #000;text-align:center}
+#feed{position:absolute;right:16px;top:12px;text-align:right;font-size:14px;text-shadow:0 0 4px #000}
+#feed .fk{background:#000b;padding:3px 8px;border-radius:4px;margin-top:3px;width:fit-content;margin-left:auto}
+#feed .fk.mine{outline:1px solid #ffd166}
+#feed .fk .fw{color:#ccc;margin:0 6px}#feed .fk .hs{color:#ff5a5a;margin-right:6px}#feed .fk .as{color:#aaa;font-size:12px;margin-left:8px}
+#chatlog{position:absolute;left:12px;bottom:176px;width:min(420px,60vw);font-size:14px;text-shadow:0 0 4px #000;pointer-events:none}
+#chatlog div{background:#0008;padding:2px 8px;border-radius:4px;margin-top:2px;word-break:break-all;transition:opacity .5s}
+#chatbox{position:absolute;left:12px;bottom:140px;display:none;pointer-events:auto;background:#000d;border:1px solid #7ab8ff;border-radius:6px;padding:4px 8px;font-size:14px}
+#chatbox input{background:transparent;border:0;outline:0;color:#fff;width:300px;font-size:14px}
+#teams{position:absolute;top:8px;left:50%;transform:translateX(-50%);display:flex;align-items:flex-start;pointer-events:none}
+#teams .tm{display:flex;gap:3px}#tmGap{width:360px}
+#teams .hm{position:relative;width:1.5em;font-size:clamp(16px,2.4vw,26px);text-align:center;line-height:1.25;border-bottom:3px solid var(--tc);background:#0009;border-radius:4px}
+#teams .hm.me{outline:2px solid #ffd166}
+#teams .hm.dead .hi{opacity:.28;filter:grayscale(1)}
+#teams .hm.dead::after{content:'✖';position:absolute;left:0;right:0;top:0;color:#ff3b3b;font-weight:900;text-shadow:0 0 3px #000}
+#ace{position:absolute;left:50%;top:6%;transform:translateX(-50%);text-align:center;display:none;pointer-events:none;white-space:nowrap;z-index:9}
+#ace .at{font-size:clamp(64px,14vw,180px);font-weight:900;letter-spacing:6px;line-height:1;text-shadow:0 0 18px #000,0 0 40px currentColor;animation:acePop .5s ease-out}
+#ace .an{font-size:clamp(18px,2.6vw,32px);font-weight:800;text-shadow:0 0 8px #000;margin-top:6px}
+@keyframes acePop{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.15);opacity:1}100%{transform:scale(1)}}
+#ammo{position:absolute;right:20px;bottom:64px;font-size:34px;font-weight:bold;text-shadow:0 0 6px #000;text-align:right}
+#ammo small{display:block;font-size:14px;font-weight:normal}
+#mic{position:absolute;right:20px;bottom:20px;padding:8px 14px;background:#0008;border:2px solid #888;border-radius:8px}
+#mic.on{border-color:#4cd964;color:#4cd964}
+#voice{position:absolute;right:20px;bottom:140px;display:none;flex-direction:column;gap:4px;align-items:flex-end}
+.vrow{background:#000a;border:2px solid #4cd964;border-radius:8px;padding:4px 10px;font-size:14px;font-weight:bold;color:#9dffb0;text-shadow:0 0 4px #000}
+.vrow.red{border-color:#ff6b6b;color:#ffb0b0}
+#sb{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(760px,94vw);max-height:88vh;overflow:auto;background:#0b1020ee;border:1px solid #2c3d7a;border-radius:12px;padding:12px 16px;display:none}
+#sb h3{margin:8px 0 4px;font-size:15px}
+#sb table{font-size:14px;table-layout:fixed}
+#sb th{color:#8fa0d8;font-weight:normal;font-size:12px}
+#sb td:nth-child(n+2),#sb th:nth-child(n+2){text-align:right;width:70px}
+#sb td:first-child,#sb th:first-child{width:auto}
+#sb tr.me td{background:#ffffff1f;font-weight:bold}
+#sb tr.dead td{opacity:.45}
+#sbhint{position:absolute;left:50%;bottom:2px;transform:translateX(-50%);font-size:12px;color:#fffa;text-shadow:0 0 4px #000}
+#dead{position:absolute;left:50%;top:84px;transform:translateX(-50%);display:none;font-size:18px;background:#000a;padding:8px 16px;border-radius:8px;text-align:center;white-space:nowrap}
+#xmark{position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);text-align:center;font-size:20px;font-weight:bold;text-shadow:0 0 8px #000;display:none;width:90%}
+#xmark b{display:block;font-size:90px;line-height:1;color:#ff4a4a}
+.gp{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.gb{padding:8px 4px;font-size:14px;background:#26356e}
+.gb small{display:block;font-weight:normal;font-size:11px;opacity:.85;margin-top:2px}
+.gb.sel{outline:2px solid #ffd166;background:#2d7a3a}
+.gb:disabled{background:#2a2d3a;color:#888;outline:none}
+#crossinfo{position:absolute;left:50%;top:56%;transform:translateX(-50%);font-size:14px;text-shadow:0 0 4px #000;display:none}
+#hitinfo{position:absolute;left:50%;top:60%;transform:translateX(-50%);font-size:20px;font-weight:bold;text-shadow:0 0 5px #000;display:none}
+#kbanner{position:absolute;left:50%;top:15%;transform:translateX(-50%);text-align:center;display:none;pointer-events:none;white-space:nowrap;font-weight:900;animation:kpop .5s ease-out}
+#kbanner .kt{line-height:1.05;letter-spacing:2px}
+#kbanner .ks{font-size:16px;margin-top:4px;text-shadow:0 0 6px #000;font-weight:700}
+.k1 .kt{font-size:30px;color:#fff;text-shadow:0 0 6px #000,0 2px 0 #000}
+.k2 .kt{font-size:40px;color:#7dffb0;text-shadow:0 0 14px #2ecc71,0 3px 0 #05341a}
+.k3 .kt{font-size:50px;color:#6ec6ff;text-shadow:0 0 18px #1e90ff,0 3px 0 #06284a}
+.k4 .kt{font-size:60px;color:#ffd166;text-shadow:0 0 22px #ff9f1a,0 4px 0 #4a2f00}
+.k5 .kt{font-size:70px;color:#ff8f6b;text-shadow:0 0 26px #ff3b30,0 4px 0 #4a0f00;animation:kshake .35s infinite}
+.k6 .kt{font-size:80px;color:#ff5ea8;text-shadow:0 0 30px #ff1493,0 5px 0 #4a001f;animation:kshake .25s infinite}
+.k7 .kt{font-size:100px;background:linear-gradient(90deg,#ff5e5e,#ffd166,#7dffb0,#6ec6ff,#c58bff,#ff5e5e);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 16px #fff) drop-shadow(0 0 28px #ffd166);animation:krainbow 1s linear infinite,kshake .2s infinite}
+.k7 .ks{font-size:22px;color:#ffd166}
+@keyframes kpop{0%{transform:translateX(-50%) scale(.3);opacity:0}60%{transform:translateX(-50%) scale(1.2);opacity:1}100%{transform:translateX(-50%) scale(1)}}
+@keyframes kshake{0%,100%{transform:translate(0,0)}25%{transform:translate(-3px,2px)}50%{transform:translate(3px,-2px)}75%{transform:translate(-2px,-3px)}}
+@keyframes krainbow{to{background-position:300% 0}}
+#flash{position:absolute;inset:0;display:none;background:radial-gradient(circle,#fff9 0,#ffd16655 40%,transparent 70%);animation:kflash .9s ease-out forwards}
+@keyframes kflash{0%{opacity:1}100%{opacity:0}}
+#mm{position:absolute;left:12px;top:12px;border:2px solid #7ab8ff;border-radius:8px;background:#0a1020cc}
+#scope{position:absolute;inset:0;display:none;background:radial-gradient(circle at center,transparent 0,transparent 24vmin,#000 24.4vmin)}
+#scope::before,#scope::after{content:'';position:absolute;background:#000c}
+#scope2{position:absolute;left:50%;top:50%;width:32vw;height:30vh;transform:translate(-50%,-50%);display:none;border:2px solid #000;border-radius:6px;box-shadow:0 0 0 150vmax rgba(0,0,0,.94),inset 0 0 18px #0009;pointer-events:none}
+#scope2::before,#scope2::after{content:'';position:absolute;background:#ff5a5acc}
+#scope2::before{left:50%;top:0;bottom:0;width:1px}#scope2::after{top:50%;left:0;right:0;height:1px}
+#scope::before{left:0;right:0;top:50%;height:1px}#scope::after{top:0;bottom:0;left:50%;width:1px}
+#lockhint{position:absolute;left:50%;top:62%;transform:translateX(-50%);background:#000b;padding:10px 18px;border-radius:8px;font-size:18px;display:none}
+#tut{position:absolute;left:12px;top:196px;max-width:330px;background:#000a;border:1px solid #7ab8ff;border-radius:8px;padding:8px 12px;font-size:14px;line-height:1.5;display:none}
+</style>
+</head>
+<body>
+
+<!-- 1. 닉네임 설정 -->
+<div id="s-nick" class="screen on">
+  <h1>하마월드 3</h1>
+  <div class="card">
+    <h2>닉네임 설정</h2>
+    <div class="row">
+      <input id="nName" placeholder="닉네임 (한글/영어)" maxlength="12" style="flex:2">
+      <span>#</span>
+      <input id="nNum" placeholder="숫자" maxlength="6" inputmode="numeric" style="flex:1;width:90px">
+    </div>
+    <div class="row" style="margin-top:10px"><input id="nAdmin" type="password" placeholder="관리자 인증 코드 (관리자만)" autocomplete="off" style="flex:1"></div>
+    <div class="row" style="margin-top:10px"><button id="nGo">시작하기</button></div>
+    <div id="err"></div>
+    <small>예: 하마#1234 · 닉네임은 한글/영어만, # 뒤는 숫자만 가능 · 이미 사용 중인 닉네임과 관리자 관련 닉네임은 사용할 수 없습니다.</small>
+  </div>
+</div>
+
+<!-- 2. 로비 -->
+<div id="s-lobby" class="screen">
+  <h1>하마월드 3 로비</h1>
+  <div class="row" style="align-items:stretch;justify-content:center">
+    <div class="card">
+      <h2 id="lName"></h2>
+      <div id="lInfo"></div>
+      <div class="row" style="margin-top:12px">
+        <button id="bPlay">🎲 랜덤 큐 시작 (7 vs 7 · 솔로)</button>
+        <button id="bTut" style="background:#2e8b57">튜토리얼 (봇전)</button>
+        <button id="bLogout" style="background:#555">닉네임 변경</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>트래커</h2>
+      <table id="tracker"></table>
+    </div>
+    <div class="card">
+      <h2>경쟁전 리더보드</h2>
+      <small>경기 결과로 점수를 얻어 티어가 오릅니다 (단계당 100점 · 아이언 1 → 인피니티)</small>
+      <table id="lb"></table>
+    </div>
+  </div>
+</div>
+
+<!-- 2-1. 랜덤 큐 대기 -->
+<div id="s-queue" class="screen">
+  <h1>🎲 랜덤 큐 · 7 vs 7</h1>
+  <div class="card" style="width:min(580px,94vw)">
+    <div id="qStat" style="font-size:18px"></div>
+    <div style="height:10px;background:#26356e;border-radius:6px;margin:10px 0;overflow:hidden"><div id="qBar" style="height:100%;width:0;background:#2d7a3a"></div></div>
+    <small>솔로 전용 큐예요. 듀오·트리오 같은 파티는 만들 수 없고, 모두 혼자서 무작위로 매칭돼요. 시간이 끝나면 빈 자리는 봇이 채워 7 vs 7로 시작해요.</small>
+    <div id="qChat" style="margin-top:10px;height:110px;overflow:auto;background:#0008;border-radius:6px;padding:6px 8px;font-size:14px;text-align:left"></div>
+    <input id="qIn" maxlength="100" autocomplete="off" placeholder="대기 중 채팅 (Enter로 전송)" style="width:100%;margin-top:6px;box-sizing:border-box">
+    <div class="row" style="margin-top:10px"><button id="qCancel" style="background:#555">큐 취소</button></div>
+  </div>
+</div>
+
+<!-- 3. 라운드 사이 (보호막 구매) -->
+<div id="s-between" class="screen">
+  <div class="card">
+    <h2 id="bTitle"></h2>
+    <div id="bBody"></div>
+    <div class="row" style="margin-top:12px">
+      <button id="bBuy10">보호막 +10 (돈 10)</button>
+      <button id="bBuyMax">최대로 채우기</button>
+    </div>
+    <div class="row" style="margin-top:12px"><button id="bNext">다음 라운드 시작</button></div>
+  </div>
+</div>
+
+<!-- 4. 경기 결과 -->
+<div id="s-result" class="screen">
+  <div class="card"><h2 id="rTitle"></h2><div id="rBody"></div>
+  <div class="row" style="margin-top:12px"><button id="rBack">로비로</button></div></div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="scope"></div>
+  <div id="scope2"></div>
+  <div id="cross"></div>
+  <canvas id="mm" width="170" height="170"></canvas>
+  <div id="score"></div>
+  <div id="feed"></div>
+  <div id="teams"><div class="tm" id="tmBlue"></div><div id="tmGap"></div><div class="tm" id="tmRed"></div></div>
+  <div id="ace"></div>
+  <div id="chatlog"></div>
+  <div id="chatbox"><b id="chatscope"></b> <input id="chatin" maxlength="100" autocomplete="off" placeholder="메시지 입력 후 Enter (Esc 취소)"></div>
+  <div id="info"></div>
+  <div id="ammo"></div>
+  <div id="shbar"><div id="shfill"></div><div id="shtext"></div></div>
+  <div id="hpbar"><div id="hpfill"></div><div id="hptext"></div></div>
+  <div id="voice"></div>
+  <div id="mic">🎤 V 키를 누르는 동안 말하기</div>
+  <div id="sb"></div>
+  <div id="sbhint">TAB: 점수판</div>
+  <div id="dead"></div>
+  <div id="xmark"></div>
+  <div id="kbanner"></div>
+  <div id="flash"></div>
+  <div id="tut"></div>
+  <div id="crossinfo"></div>
+  <div id="hitinfo"></div>
+  <div id="lockhint">화면을 클릭하면 조작할 수 있어요</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ===== 저장소 (초안: localStorage / 정식: Firebase로 교체) =====
+   TODO: 아래 reg()/saveReg()를 Firebase Realtime DB로 바꾸면
+   닉네임 중복 검사, 트래커, 리더보드가 모든 플레이어 사이에서 공유됩니다. */
+const reg = () => JSON.parse(localStorage.getItem('hw3_reg') || '{}');
+const saveReg = r => localStorage.setItem('hw3_reg', JSON.stringify(r));
+let me = null; // 현재 플레이어 기록
+
+/* ===== 게임 규칙 (여기 숫자만 바꾸면 밸런스 조정) ===== */
+const BANNED = ['admin','administrator','관리자','운영자','운영','개발자','dev','developer','secret','xnxns','gm','mod','root','system','staff','hamaworld','하마월드'];
+const MAX_HP = 100;            // 체력 고정
+const WIN_ROUNDS = 10;         // 먼저 10라운드를 따면 승리
+const MONEY_PER_WIN = 25;      // 라운드 승리 시 지급되는 돈
+const LOSE_RATIO = 0.8;        // 진 팀(무승부 포함)은 이긴 팀의 80%만 지급
+const MONEY_MAX = 50;          // 돈 최대치
+const SHIELD_MAX = 50;         // 보호막 최대치 (돈 1 = 보호막 1)
+const RELOAD_TIME = 2;         // 재장전 2초 고정
+const ROUND_TIME = 100;        // 라운드 제한시간(초) - 시간 안에 못 끝내면 무승부
+const TUT_ROUNDS = 3;          // 봇전은 3라운드 선승 - 총 업그레이드까지 체험
+const HEAD_R = 0.52;            // 헤드 판정 반지름(머리 중심 기준) - 작을수록 헤드샷이 어려움 (머리 모델 반지름이 약 0.44~0.56이라 0.45 이하는 사실상 헤드샷 불가)
+/* 경쟁전 티어: 아이언1~3 → … → 챔피언1~3 → 인피니티. 단계마다 100점 */
+const TIER_GROUPS = [['아이언','#9a9a9a'],['브론즈','#c98a4b'],['실버','#cfd8e3'],['골드','#ffd166'],['플레티넘','#4fe0c4'],['다이아','#6ec6ff'],['저격수','#ff8f6b'],['마스터','#c58bff'],['챔피언','#ff5ea8']];
+const TIERS = []; TIER_GROUPS.forEach(([n,c])=>[1,2,3].forEach(i=>TIERS.push({name:`${n} ${i}`,color:c})));
+TIERS.push({name:'인피니티',color:'#7df9ff'});
+const TIER_PTS = 100;                                  // 한 단계당 필요 점수
+const MVP_PTS = 25;                                    // 전체 MVP (승패 무관, 팀 등수 점수 대신 받음)
+const WIN_PTS  = [20,18,16,14,12,10,8];                // 승리 팀 1~7등
+const LOSE_PTS = [-7,-9,-11,-13,-15,-17,-19];          // 패배 팀 1~7등 (감점) — 전체 MVP는 감점 없이 MVP 점수를 받음
+function tierInfo(pts){
+  const i=Math.min(TIERS.length-1,Math.floor(pts/TIER_PTS)), last=i===TIERS.length-1;
+  return {idx:i, name:TIERS[i].name, color:TIERS[i].color, into:last?pts-i*TIER_PTS:pts-i*TIER_PTS, last,
+          label:`<span style="color:${TIERS[i].color};font-weight:bold">${TIERS[i].name}</span>`};
+}
+const TEAM_SIZE = 7;            // 7 vs 7
+const TUT_TEAM = 7;             // 봇전도 7 vs 7
+const LET = 'ABCDEFGHIJ';
+let tutorial = false;
+const goal = () => tutorial ? TUT_ROUNDS : WIN_ROUNDS;
+/* 아래 데미지는 근거리(rng[0] 이내) 기준. rng=[감소 시작 거리, 최소 데미지 거리, 최소 배율], zoom=줌 시 시야각 */
+const WEAPONS = [
+  /* unlock = 이 총이 열리는 라운드 승리 수 · mag/reserve = 탄창/예비 탄약 · rate = 초당 발사 수 · recoil = 발사당 반동
+     reload = 재장전 시간(초, 배열이면 [부족한 탄 1발일 때, 2발일 때]) · zoom = 줌 배율 목록(여러 개면 줌 중 마우스 휠로 전환)
+     moveMul = 이동속도 배율 · spread = [처음, 연사 최대] 탄퍼짐(라디안) */
+  {name:'기본 권총',  unlock:0, mag:12,  reserve:48,  rate:6.75, reload:1.5, head:50,  body:30,  leg:20, recoil:.035, rng:[12,45,.5],  zoom:[]},
+  {name:'SMG',        unlock:2, mag:20,  reserve:60,  rate:13.33,reload:2.25,head:30,  body:15,  leg:10, recoil:.02,  rng:[10,35,.4],  zoom:[1.15]},
+  {name:'AK47',       unlock:4, mag:25,  reserve:50,  rate:9.75, reload:2.5, head:150, body:40,  leg:30, recoil:.012, rng:[25,70,.6],  zoom:[1.25]},
+  {name:'스나이퍼',   unlock:6, mag:2,   reserve:14,  rate:2.7,  reload:[1.8,2.9],head:200,body:80,leg:50,recoil:.09, rng:[40,100,.85],zoom:[3.5]},
+  {name:'오토건',     unlock:8, mag:100, reserve:200, rate:12,   reload:5,   head:75,  body:50,  leg:25, recoil:.007, rng:[10,40,.4],  zoom:[2.5,5], moveMul:.9, spread:[.008,.045]},
+  {name:'엘리펀트건', unlock:9, mag:5,   reserve:10,  rate:0.6,  reload:2,   head:150, body:100, leg:50, recoil:.12,  rng:[30,80,.7],  zoom:[2]},
+];
+const zoomFov = m => 2*Math.atan(Math.tan(37.5*Math.PI/180)/m)*180/Math.PI;   // 배율 → 시야각 (기본 75°가 1배)
+function dmgAt(w,zone,dist){   // 거리별 데미지: 가까우면 100%, 멀수록 선형으로 감소
+  const [full,far,minM]=w.rng; if(dist<=full) return w[zone];
+  const t=Math.min(1,(dist-full)/(far-full));
+  return Math.max(1,Math.round(w[zone]*(1-(1-minM)*t)));
+}
+const wIdx = wins => WEAPONS.reduce((b,w,i)=>wins>=w.unlock?i:b,0);   // 라운드 승리 수에 따라 열린 가장 좋은 총 (레벨/티어 무관)
+
+/* ===== 화면 전환 ===== */
+const $ = id => document.getElementById(id);
+function show(id){ document.querySelectorAll('.screen').forEach(e=>e.classList.remove('on')); if(id) $(id).classList.add('on'); }
+
+/* ===== 닉네임 ===== */
+/* 관리자 인증: 코드의 SHA-256 해시만 저장합니다.
+   TODO: 정식 버전은 Firebase Authentication(관리자 UID 허용 목록 + DB 규칙)으로 교체하세요. */
+const ADMIN_HASH = '8a233206470c6992a35a8e514146ef41d0faf396164d54cf47605b31b8efbbf4';
+async function isAdminCode(code){
+  if(!code || !window.crypto || !crypto.subtle) return false;
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(code));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('') === ADMIN_HASH;
+}
+async function login(){
+  const name = $('nName').value.trim(), num = $('nNum').value.trim(), err = $('err');
+  const code = $('nAdmin').value;
+  const admin = await isAdminCode(code);
+  if(code && !admin) return err.textContent='관리자 인증에 실패했습니다.';
+  if(admin){
+    if(!/^[가-힣A-Za-z0-9_]{2,12}$/.test(name)) return err.textContent='관리자 닉네임은 한글/영어/숫자/_ 2~12자만 가능합니다.';
+  } else if(!/^[가-힣A-Za-z]{2,12}$/.test(name)) return err.textContent='닉네임은 한글/영어 2~12자만 가능합니다.';
+  if(!/^\d{1,6}$/.test(num)) return err.textContent='# 뒤에는 숫자(1~6자리)만 입력할 수 있습니다.';
+  const low = name.toLowerCase();
+  if(!admin && BANNED.some(b=>low.includes(b))) return err.textContent='사용할 수 없는 닉네임입니다. (관리자 관련)';
+  const r = reg(), key = low;
+  if(r[key]){
+    if(localStorage.getItem('hw3_me')===key && r[key].num===num){ me=r[key]; return enterLobby(); }
+    return err.textContent='이미 사용 중인 닉네임입니다.';
+  }
+  r[key] = {key, name, num, admin, level:1, wins:0, losses:0, kills:0, deaths:0, bans:0, matches:0, bestStage:0};
+  saveReg(r); localStorage.setItem('hw3_me', key); me=r[key]; enterLobby();
+}
+$('nGo').onclick = login;
+$('bLogout').onclick = ()=>{ localStorage.removeItem('hw3_me'); me=null; $('err').textContent=''; show('s-nick'); };
+
+/* ===== 로비 / 트래커 / 리더보드 ===== */
+function enterLobby(){
+  if(!me.tutorialDone){ startMatch(true); return; }   // 닉네임 입력 직후 튜토리얼(봇전)을 끝내야 로비에 들어올 수 있음
+  $('lName').textContent = `${me.name}#${me.num}`;
+  $('lInfo').innerHTML = `프로필 레벨 <b>${me.level}</b> (경기 후 상승, 스킨 해금용 예정)<br>
+    티어 ${tierInfo(me.points||0).label} (${tierInfo(me.points||0).last?`+${tierInfo(me.points||0).into}`:`${tierInfo(me.points||0).into}/${TIER_PTS}`}점)<br>체력 ${MAX_HP} · ${WIN_ROUNDS}라운드 선승 · 라운드 승리로 총기 해금 · 대기 시간에 교체<br>목표: 적 전원 처치 (제한시간 안에 못 끝내면 무승부)<br>🎲 랜덤 큐: 솔로 전용 7 vs 7 (듀오·트리오 불가)<br>
+    <small>${WEAPONS.map(w=>w.name).join(' → ')}</small>`;
+  $('tracker').innerHTML =
+    `<tr><th>티어</th><td>${tierInfo(me.points||0).label} · 총 ${me.points||0}점</td></tr>
+     <tr><th>정지 횟수</th><td>${me.bans}회</td></tr>
+     <tr><th>진행도</th><td>최고 총기 ${WEAPONS[me.bestStage||0].name} (${(me.bestStage||0)+1}/${WEAPONS.length}단계)</td></tr>
+     <tr><th>전적</th><td>${me.wins}승 ${me.losses}패 (${me.matches}경기)</td></tr>
+     <tr><th>킬/데스/어시</th><td>${me.kills} / ${me.deaths} / ${me.assists||0}</td></tr>`;
+  const list = Object.values(reg()).sort((a,b)=>(b.points||0)-(a.points||0)||b.wins-a.wins);
+  const rank = list.findIndex(p=>p.key===me.key)+1;
+  $('lb').innerHTML = `<tr><th>#</th><th>닉네임</th><th>점수</th><th>티어</th></tr>` +
+    list.slice(0,10).map((p,i)=>`<tr><td>${i+1}</td><td>${p.name}#${p.num}</td><td>${p.points||0}</td><td>${tierInfo(p.points||0).label}</td></tr>`).join('') +
+    `<tr><td colspan="4" style="padding-top:8px">내 순위: ${rank}위 · ${tierInfo(me.points||0).label} (${me.points||0}점)</td></tr>`;
+  show('s-lobby');
+}
+$('rBack').onclick = enterLobby;
+
+/* ===== 3D 게임 ===== */
+let renderer, scene, camera, clock, raf=0, running=false, roundActive=false;
+let ents=[], obstacles=[], roundWins={blue:0,red:0}, round=1, roundT=0, money=0;
+let yaw=0, pitch=0, keys={}, mouseDown=false, vy=0, onGround=true;
+let player=null, shotCool=0, mag=0, reserve=0, reloadT=0;
+let pickGun=0, betweenNote='', specIdx=0, tutStep=0, moved=0, rDealt=0, rTaken=0, recP=0, recY=0;
+let rKills=0, zoomOn=false, scoped=false, rectOn=false;
+let meleeOn=false, meleeCool=0, endPending=false, endTimer=0, warnRed=false, warnBlue=false;
+let crouch=false, eyeCur=1.7, reloadMax=2, zoomLvl=0, heat=0;   // 앉기 / 눈높이 / 현재 재장전 시간 / 줌 단계 / 탄퍼짐 열
+
+function makeLabel(text,color,through){
+  const c=document.createElement('canvas'); c.width=256; c.height=64;
+  const x=c.getContext('2d'); x.font='bold 28px sans-serif'; x.fillStyle=color; x.textAlign='center'; x.fillText(text,128,40);
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:!through}));
+  s.scale.set(3.2,.8,1); s.position.y=2.7; return s;
+}
+function spawnPos(team,slot=0){   // 팀원마다 자리(slot)를 나눠서 겹치지 않게 일렬로 배치
+  const x=(slot-3)*5.5+(Math.random()-.5)*1.5, z=(team==='blue'?42:-42)+((slot%2)?(team==='blue'?4:-4):0);
+  return new THREE.Vector3(x,0,z);
+}
+
+/* 총 모델 (앞쪽이 +z). vm=true면 1인칭 화면용(벽에 안 가려지게 depthTest 끔) */
+function makeGun(idx,vm){
+  const g=new THREE.Group();
+  const mat=c=>{const m=new THREE.MeshLambertMaterial({color:c}); if(vm) m.depthTest=false; return m;};
+  const dark=mat(0x2b2f3a), acc=mat([0xcccccc,0x66ccff,0x66ff99,0xffcc44,0xb084ff,0xff8a3d][idx]);
+  const B=(w,h,d,x,y,z,m)=>{const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m||dark); b.position.set(x,y,z); if(vm) b.renderOrder=999; g.add(b); return b;};
+  if(idx===0){ B(.1,.14,.45,0,0,.2); B(.09,.2,.12,0,-.14,.05); B(.11,.04,.2,0,.09,.25,acc); }
+  else if(idx===1){ B(.12,.16,.65,0,0,.3); B(.08,.24,.1,0,-.18,.3); B(.09,.18,.1,0,-.14,.05); B(.13,.04,.3,0,.1,.3,acc); B(.06,.06,.25,0,0,.75); }
+  else if(idx===2){ B(.12,.18,.95,0,0,.45); B(.07,.07,.35,0,.02,1.05); B(.08,.26,.12,0,-.2,.4); B(.1,.14,.3,0,-.02,-.15); B(.13,.05,.5,0,.12,.45,acc); }
+  else if(idx===3){ B(.1,.14,1.3,0,0,.65); B(.06,.06,.6,0,0,1.5); B(.1,.2,.4,0,-.08,-.15); B(.08,.2,.1,0,-.15,.2);
+    const sc=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.45,12),acc); sc.rotation.x=Math.PI/2; sc.position.set(0,.17,.6); if(vm) sc.renderOrder=999; g.add(sc); }
+  else if(idx===4){   // 오토건: 두툼한 총몸 + 원통형 대용량 탄창
+    B(.16,.2,.85,0,0,.4); B(.07,.07,.5,0,.02,1.05); B(.08,.2,.1,0,-.17,.05); B(.12,.1,.3,0,-.01,-.18);
+    const dr=new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,.14,14),acc); dr.rotation.z=Math.PI/2; dr.position.set(0,-.2,.38); if(vm) dr.renderOrder=999; g.add(dr); }
+  else {              // 엘리펀트건: 굵은 총열의 대구경 총
+    B(.22,.26,1.1,0,0,.55); B(.15,.15,.75,0,.02,1.45,acc); B(.12,.28,.18,0,-.22,.1); B(.2,.2,.4,0,-.04,-.25);
+    const mz=new THREE.Mesh(new THREE.CylinderGeometry(.13,.13,.1,12),acc); mz.rotation.x=Math.PI/2; mz.position.set(0,.02,1.85); if(vm) mz.renderOrder=999; g.add(mz); }
+  return g;
+}
+/* 근접 무기: 숫자 3 = 근접 / 1 = 총. 좌클릭 베기, 우클릭 강공격 */
+const MELEE={name:'근접 무기', light:35, heavy:75, range:2.6, lightCd:.45, heavyCd:1.1, moveMul:1.15};
+function makeKnife(vm){
+  const g=new THREE.Group();
+  const mat=c=>{const m=new THREE.MeshLambertMaterial({color:c}); if(vm) m.depthTest=false; return m;};
+  const add=(w,h,d,x,y,z,c)=>{const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c)); b.position.set(x,y,z); if(vm) b.renderOrder=999; g.add(b);};
+  add(.05,.12,.2,0,-.02,0,0x2b2f3a); add(.09,.03,.06,0,.05,.12,0x888888); add(.03,.1,.55,0,.03,.42,0xdddddd);
+  return g;
+}
+function switchMelee(on){
+  if(!player||player.dead||!running||meleeOn===on) return;
+  meleeOn=on; reloadT=0; zoomOn=false; mouseDown=false; setVm(); updateHud();
+}
+function meleeHit(heavy){
+  meleeCool=heavy?MELEE.heavyCd:MELEE.lightCd; vmKick=1;
+  camera.updateMatrixWorld(true);
+  const rc=new THREE.Raycaster(); rc.setFromCamera({x:0,y:0},camera); rc.far=MELEE.range;
+  const targets=[...obstacles]; ents.forEach(e=>{ if(!e.dead&&e.team!==player.team) targets.push(...e.parts); });
+  const hit=rc.intersectObjects(targets,false)[0];
+  if(hit&&hit.object.userData.ent){
+    const dmg=heavy?MELEE.heavy:MELEE.light;
+    showHit('body',dmg,hit.distance); damage(hit.object.userData.ent,dmg,player,'body',MELEE.name);
+  }
+}
+function setGun(e){   // 하마가 손에 든 총을 현재 무기로 교체
+  const h=e.gunHolder; while(h.children.length) h.remove(h.children[0]);
+  h.add(makeGun(WEAPONS.indexOf(e.weapon),false));
+}
+let vmHold=null, vmKick=0, vmSwayX=0, vmSwayY=0;
+function setVm(){     // 내 화면(1인칭)에 보이는 총
+  if(vmHold) camera.remove(vmHold);
+  vmHold=new THREE.Group();
+  const gun=meleeOn?makeKnife(true):makeGun(WEAPONS.indexOf(player.weapon),true); gun.rotation.y=Math.PI; gun.scale.setScalar(.55); vmHold.add(gun);
+  const hand=new THREE.Mesh(new THREE.SphereGeometry(.09,10,8),new THREE.MeshLambertMaterial({color:0x7f94ad,depthTest:false}));
+  hand.renderOrder=999; hand.position.set(0,-.14,-.12); vmHold.add(hand);
+  camera.add(vmHold);
+}
+function vmTick(dt,moving){   // 걷기 흔들림 / 발사 반동 / 재장전 동작
+  if(!vmHold) return;
+  vmHold.visible=!(scoped||rectOn); vmKick=Math.max(0,vmKick-dt*8);
+  const t=performance.now()/1000, bob=moving?Math.sin(t*10)*.012:Math.sin(t*1.5)*.004;
+  const rl=reloadT>0?Math.sin(Math.PI*(1-reloadT/reloadMax)):0;
+  vmHold.position.set(.32,-.3+bob-rl*.28,-.55+vmKick*.12);
+  if(meleeOn) vmHold.rotation.set(-vmKick*.6+vmSwayY,vmSwayX+vmKick*.5,vmKick*1.1); else vmHold.rotation.set(vmKick*.25+rl*.9+vmSwayY,vmSwayX,rl*.3);
+  const dec=Math.max(0,1-dt*8); vmSwayX*=dec; vmSwayY*=dec;
+}
+
+function mkEnt(team,name,isPlayer,slot=0){
+  const g=new THREE.Group();
+  const col = team==='blue'?0x3a8dff:0xff4a4a;
+  /* 외형: 월드 1 주인공 하마(청회색 하마 캐릭터) 모델을 그대로 옮김 */
+  const HB=0x7f94ad, HL=0xaebdd0;
+  const mk=(geo,c,basic)=>new THREE.Mesh(geo,basic?new THREE.MeshBasicMaterial({color:c}):new THREE.MeshStandardMaterial({color:c,roughness:.6,metalness:.12}));
+  const OL=new THREE.MeshBasicMaterial({color:0x0b0f1a,side:THREE.BackSide});
+  const add=(m,x,y,z,p)=>{m.position.set(x,y,z);if(!m.material.isMeshBasicMaterial){const o=new THREE.Mesh(m.geometry,OL);o.scale.setScalar(1.06);m.add(o);}p.add(m);return m;};
+  const SS=(r,c,sx=1,sy=1,sz=1)=>{const m=mk(new THREE.SphereGeometry(r,18,14),c);m.scale.set(sx,sy,sz);return m;};
+  const CY=(a,b,h,c)=>mk(new THREE.CylinderGeometry(a,b,h,12),c);
+  /* 피격 부위: head / body / leg (총알 판정에 쓰이는 메시만 등록) */
+  const legs=[]; let rArm=null, lArm=null; const parts=[]; const hit=(m,zone)=>{m.userData.zone=zone;parts.push(m);return m;};
+  const hip=new THREE.Group(), tor=new THREE.Group(); hip.add(tor); tor.position.y=1.05;
+  hit(add(SS(.62,HB,1.12,1.1,1),0,.5,0,tor),'body'); hit(add(SS(.45,HL,1,1.05,.5),0,.42,.46,tor),'body'); add(SS(.16,HB),0,.2,-.55,tor);
+  const hd=new THREE.Group(); hd.position.y=1.3; tor.add(hd);
+  hit(add(SS(.62,HB,1.2,.95,1),0,0,0,hd),'head'); hit(add(SS(.48,HL,1.3,.7,1.05),0,-.18,.5,hd),'head');
+  [-1,1].forEach(q=>{hit(add(SS(.14,HB),q*.48,.55,-.05,hd),'head');add(SS(.07,HL),q*.48,.55,.03,hd);add(mk(new THREE.SphereGeometry(.075,10,8),0x111111,1),q*.3,.3,.52,hd);add(mk(new THREE.SphereGeometry(.055,8,8),0x2a3340,1),q*.16,-.04,.95,hd);});
+  add(mk(new THREE.BoxGeometry(.5,.04,.04),0x2a3340,1),0,-.34,.96,hd);
+  [-1,1].forEach(q=>{const pv=new THREE.Group();pv.position.set(q*.28,1.05,0);hip.add(pv);legs.push(pv);hit(add(CY(.22,.2,.8,HB),0,-.4,0,pv),'leg');hit(add(SS(.27,HB,1,.62,1.4),0,-.84,.1,pv),'leg');});
+  [-1,1].forEach(q=>{const a=new THREE.Group();a.position.set(q*.72,.85,0);tor.add(a);a.rotation.x=(q===1?-Math.PI/2:-1.2); if(q===1) rArm=a; else lArm=a;hit(add(CY(.16,.14,.8,HB),0,-.4,0,a),'body');hit(add(SS(.19,HB),0,-.86,0,a),'body');});
+  hip.scale.setScalar(.75); g.add(hip);
+  const gunHolder=new THREE.Group(); gunHolder.position.set(.72,.82,.45); gunHolder.scale.setScalar(.9); tor.add(gunHolder);
+  /* 팀 구분: 발밑 팀 색 링 */
+  const ring=new THREE.Mesh(new THREE.RingGeometry(.9,1.1,24),new THREE.MeshBasicMaterial({color:col,side:THREE.DoubleSide}));
+  ring.rotation.x=-Math.PI/2; ring.position.y=.05; g.add(ring);
+  const label=makeLabel(name, team==='blue'?'#8fc2ff':'#ff9a9a', team==='blue');
+  label.position.y=3.0; g.add(label);
+  const e={team,name,g,hp:MAX_HP,shield:0,isPlayer,kills:0,deaths:0,assists:0,dead:false,cool:Math.random(),weapon:WEAPONS[0],parts,dmgFrom:{},lastZone:'body',gunHolder,hd,dealt:0,slot,legs,rArm,lArm,hip,walk:0,kick:0,vx:0,vz:0,prev:new THREE.Vector3(),
+    tgt:null,mem:null,memT:99,scanT:Math.random()*.2,reactT:0,alert:0,alertPos:null,wp:null,side:Math.random()<.5?1:-1,stuckT:0,stuckP:new THREE.Vector3(),unstick:0,ux:0,uz:0};
+  parts.forEach(m=>m.userData.ent=e);
+  if(isPlayer) g.visible=false;
+  g.position.copy(spawnPos(team,slot)); scene.add(g); ents.push(e); return e;
+}
+
+function box(x,z,w,h,d,color){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color}));
+  m.position.set(x,h/2,z); scene.add(m); obstacles.push(m); return m;
+}
+
+function initScene(){
+  if(!renderer){
+    renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setSize(innerWidth,innerHeight);
+    document.body.appendChild(renderer.domElement);
+    addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
+  }
+  scene=new THREE.Scene(); scene.background=new THREE.Color(0x87b8ff); scene.fog=new THREE.Fog(0x87b8ff,60,160);
+  camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,300); scene.add(camera); vmHold=null;
+  scene.add(new THREE.AmbientLight(0xffffff,.65));
+  const sun=new THREE.DirectionalLight(0xffffff,.8); sun.position.set(30,60,20); scene.add(sun);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(120,120),new THREE.MeshLambertMaterial({color:0x4a7a4a}));
+  floor.rotation.x=-Math.PI/2; scene.add(floor);
+  obstacles=[]; ents=[];
+  [[-45,0,2,6,90],[45,0,2,6,90]].forEach(([x,z,w,h,d])=>box(x,z,w,h,d,0x555566));
+  [[0,-58,120,6,2],[0,58,120,6,2]].forEach(([x,z,w,h,d])=>box(x,z,w,h,d,0x555566));
+  [[-15,10,6,4,6],[15,-10,6,4,6],[0,0,8,5,3],[-25,-20,5,4,5],[25,20,5,4,5],[-10,-30,4,3,8],[10,30,4,3,8]].forEach(([x,z,w,h,d])=>box(x,z,w,h,d,0x8a7a6a));
+  /* 추가 엄폐물 11종 × 점대칭 2개 = 22개 — 엄폐물 사이 틈은 최소 2.4 이상이라 지나가며 피킹(몸 내밀기)할 수 있음 */
+  [[-30,2,4,3,4],[-8,-14,6,3,2.5],[22,-30,3,3.5,9],[-36,12,5,4,5],[-20,-6,2.5,3,7],[6,-22,5,2.5,5],[34,-24,4,3,4],[-18,-34,7,3,2],[14.5,-35,7,3,2],[-38,-38,5,3,5],[12,-1.6,3,3,6]]
+    .forEach(([x,z,w,h,d],i)=>{ const c=[0x8a7a6a,0x7a6a5a,0x6f7f8f][i%3]; box(x,z,w,h,d,c); box(-x,-z,w,h,d,c); });
+}
+
+/* ===== 경기 / 라운드 흐름 ===== */
+function startMatch(tut){
+  tutorial=!!tut; tutStep=0; moved=0; pickGun=0; betweenNote=''; $('chatlog').innerHTML='';
+  initScene(); roundWins={blue:0,red:0}; round=1; money=0;
+  const N=tutorial?TUT_TEAM:TEAM_SIZE;
+  player=mkEnt('blue',me.name,true,0);
+  for(let i=1;i<N;i++) mkEnt('blue',`아군 하마${LET[i-1]}`,false,i);
+  for(let i=0;i<N;i++) mkEnt('red',`적 하마${LET[i]}`,false,i);
+  startRound();
+}
+
+function startRound(){
+  ents.forEach(e=>{
+    e.dead=false; e.hp=MAX_HP; e.cool=Math.random(); e.dmgFrom={}; e.dmgT={}; e.tgt=null; e.mem=null; e.memT=99; e.alert=0; e.alertPos=null; e.wp=null; e.unstick=0; e.scanT=Math.random()*.2; e.reactT=0;
+    e.weapon=WEAPONS[e.isPlayer?Math.min(pickGun,wIdx(roundWins.blue)):wIdx(roundWins[e.team])]; setGun(e);   // 나는 대기 시간에 고른 총(열린 것 중), 봇은 팀 승수에 맞는 가장 좋은 총
+    e.g.position.copy(spawnPos(e.team,e.slot)); e.g.visible=!e.isPlayer; e.prev.copy(e.g.position); e.stuckP.copy(e.g.position); e.stuckT=0; e.vx=0; e.vz=0; e.kick=0;
+  });
+  const w=player.weapon; meleeOn=false; meleeCool=0; endPending=false; clearTimeout(endTimer); warnRed=warnBlue=false; ents.forEach(e=>e.rk=0); $('ace').style.display='none'; setVm(); buildTeamBar(); mag=w.mag; reserve=w.reserve; reloadT=0; shotCool=0; rDealt=0; rTaken=0; specIdx=0; recP=0; recY=0;
+  yaw=0; pitch=0; vy=0; camera.position.y=1.7; mouseDown=false; crouch=false; eyeCur=1.7; heat=0; zoomLvl=0;
+  rKills=0; $('kbanner').style.display='none'; $('flash').style.display='none';
+  intel={blue:null,red:null}; zoomOn=false; camera.fov=75; camera.updateProjectionMatrix(); hideSb();
+  roundT=ROUND_TIME; roundActive=true; running=true; clock=new THREE.Clock();
+  show(null); $('hud').style.display='block'; $('dead').style.display='none'; $('xmark').style.display='none'; $('feed').innerHTML=''; tutShow(); if(document.activeElement) document.activeElement.blur();
+  lockPtr();
+  updateHud(); cancelAnimationFrame(raf); loop();
+}
+
+function lockPtr(){ try{ const p=renderer.domElement.requestPointerLock(); if(p&&p.catch) p.catch(()=>{}); }catch(e){} }   // 마우스 잠금 요청이 거부돼도 오류 없이 넘어감
+const alive = team => ents.filter(x=>x.team===team&&!x.dead);
+
+/* ===== 미니맵 (살아있는 팀원 시야에 잡힌 적만 표시) ===== */
+const mmx=$('mm').getContext('2d'), MMS=170/120, mmP=(x,z)=>[(x+60)*MMS,(z+60)*MMS];
+let mmSpot={}, mmT=0;
+function mmTick(dt){
+  mmT-=dt;
+  if(mmT<=0){ mmT=.2; mmSpot={}; const mates=alive('blue');
+    ents.forEach(x=>{ if(x.team==='red'&&!x.dead&&mates.some(m=>m.g.position.distanceTo(x.g.position)<60&&hasLOS(m.g.position,x.g.position))) mmSpot[x.name]=1; }); }
+  const c=mmx; c.clearRect(0,0,170,170);
+  c.fillStyle='#6a6a7a';
+  obstacles.forEach(o=>{ const b=o.geometry.parameters, [x,y]=mmP(o.position.x-b.width/2,o.position.z-b.depth/2); c.fillRect(x,y,b.width*MMS,b.depth*MMS); });
+  ents.forEach(x=>{
+    if(x.team!=='blue'||x.isPlayer) return;
+    const [px,py]=mmP(x.g.position.x,x.g.position.z);
+    if(x.dead){ c.strokeStyle='#888'; c.lineWidth=1.5; c.beginPath(); c.moveTo(px-3,py-3); c.lineTo(px+3,py+3); c.moveTo(px+3,py-3); c.lineTo(px-3,py+3); c.stroke(); }
+    else { c.fillStyle='#3a8dff'; c.beginPath(); c.arc(px,py,4,0,6.283); c.fill(); }
+  });
+  ents.forEach(x=>{
+    if(x.team!=='red'||x.dead||!mmSpot[x.name]) return;
+    const [px,py]=mmP(x.g.position.x,x.g.position.z);
+    c.fillStyle='#ff4a4a'; c.beginPath(); c.arc(px,py,4,0,6.283); c.fill(); c.strokeStyle='#fff'; c.lineWidth=1; c.stroke();
+  });
+  if(!player.dead){
+    const [mx,my]=mmP(player.g.position.x,player.g.position.z), fx=-Math.sin(yaw), fz=-Math.cos(yaw);
+    c.save(); c.translate(mx,my); c.rotate(Math.atan2(fx,-fz));
+    c.fillStyle='#fff'; c.strokeStyle='#3a8dff'; c.lineWidth=1.5;
+    c.beginPath(); c.moveTo(0,-7); c.lineTo(5,5); c.lineTo(-5,5); c.closePath(); c.fill(); c.stroke(); c.restore();
+  }
+}
+
+function endRound(win){
+  if(!roundActive) return;
+  roundActive=false; running=false; zoomOn=false; closeChat(false); cancelAnimationFrame(raf);
+  document.exitPointerLock(); $('hud').style.display='none';
+  const before=wIdx(roundWins.blue);
+  const gain=win==='blue'?MONEY_PER_WIN:Math.round(MONEY_PER_WIN*LOSE_RATIO);
+  money=Math.min(MONEY_MAX,money+gain);
+  if(win!=='draw'){
+    roundWins[win]++;
+    if(roundWins[win]>=goal()) return endMatch(win);
+  }
+  round++;
+  const after=wIdx(roundWins.blue), up=after>before; if(up) pickGun=after;   // 새 총이 열리면 자동 선택(대기 시간에 바꿀 수 있음)
+  $('bTitle').textContent=`${win==='blue'?'🏆 라운드 승리!':win==='red'?'라운드 패배':`⏱ ${ROUND_TIME}초 안에 끝내지 못해 무승부`} · ${roundWins.blue} : ${roundWins.red}`;
+  renderBetween((up?`🔫 새 총기 해금! → ${WEAPONS[after].name}<br>`:'')+`이번 라운드 지급 돈 +${gain}${win==='blue'?'':' (이긴 팀의 80%)'}<br>이번 라운드 내가 입힌 피해 ${Math.round(rDealt)} · 받은 피해 ${Math.round(rTaken)}`);
+  show('s-between');
+}
+function renderBetween(note){
+  if(note!==undefined) betweenNote=note;
+  const w=roundWins.blue, mx=wIdx(w), cur=Math.min(pickGun,mx), next=WEAPONS[cur];
+  $('bBody').innerHTML=`${betweenNote?`<b>${betweenNote}</b><br>`:''}다음 라운드 ${round} · 내 총기: <b>${next.name}</b> (${goal()}라운드 선승)<br>
+    돈 <b>${money}</b> / ${MONEY_MAX} · 보호막 <b>${player.shield}</b> / ${SHIELD_MAX}<br><small>이긴 팀 ${MONEY_PER_WIN} / 진 팀 ${Math.round(MONEY_PER_WIN*LOSE_RATIO)}(80%) 지급 · 돈 1 = 보호막 1</small>
+    <div style="margin:12px 0 4px"><b>총기 선택</b> <small>(대기 시간에 교체 · 라운드를 이겨서 해금)</small></div>
+    <div class="gp">${WEAPONS.map((g,i)=>{ const lock=g.unlock>w;
+      return `<button class="gb${i===cur?' sel':''}" data-g="${i}" ${lock?'disabled':''}>${lock?'🔒 ':''}${g.name}<small>${lock?`${g.unlock}승 필요`:`${g.mag}/${g.reserve}발 · ${g.head}/${g.body}/${g.leg}`}</small></button>`; }).join('')}</div>`;
+  $('bBuy10').disabled=!(money>=1&&player.shield<SHIELD_MAX);
+  $('bBuyMax').disabled=$('bBuy10').disabled;
+}
+function buyShield(n){
+  n=Math.min(n,money,SHIELD_MAX-player.shield); if(n<=0) return;
+  money-=n; player.shield+=n; renderBetween();
+}
+$('bBuy10').onclick=()=>buyShield(10);
+$('bBuyMax').onclick=()=>buyShield(SHIELD_MAX);
+$('bNext').onclick=startRound;
+$('bBody').addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('.gb'); if(!b||b.disabled) return; pickGun=+b.dataset.g; renderBetween(); });
+
+function endMatch(winTeam){
+  const win=winTeam==='blue', r=reg();
+  if(tutorial){
+    me.tutorialDone=true; r[me.key]=me; saveReg(r);
+    $('rTitle').textContent=win?'🎓 튜토리얼 완료!':'튜토리얼 종료';
+    $('rBody').innerHTML='봇전은 전적/리더보드에 기록되지 않습니다.<br>이제 7 vs 7 팀전에 도전해 보세요!';
+    return show('s-result');
+  }
+  me.matches++; me.kills+=player.kills; me.deaths+=player.deaths; me.assists=(me.assists||0)+player.assists;
+  if(win){ me.wins++; me.level+=2; } else { me.losses++; me.level+=1; }
+  me.bestStage=Math.max(me.bestStage||0, wIdx(roundWins.blue));
+  /* 활약도 = 킬×150 + 어시스트×50 + 입힌 피해 → 팀 등수 / 전체 MVP 결정 */
+  const perf=x=>x.kills*150+(x.assists||0)*50+x.dealt;
+  const all=[...ents].sort((a,b)=>perf(b)-perf(a)), mvp=all[0];
+  const mates=ents.filter(x=>x.team===player.team).sort((a,b)=>perf(b)-perf(a)), rank=mates.indexOf(player);
+  const table=win?WIN_PTS:LOSE_PTS, isMvp=(mvp===player);
+  const gain=isMvp?MVP_PTS:(table[rank]??table[table.length-1]);
+  const before=me.points||0, tb=tierInfo(before); me.points=Math.max(0,before+gain); const real=me.points-before; const ta=tierInfo(me.points);   // 점수는 0 아래로 내려가지 않음
+  r[me.key]=me; saveReg(r);
+  const up=ta.idx>tb.idx, down=ta.idx<tb.idx;
+  $('rTitle').textContent=win?'🏆 경기 승리!':'경기 패배...';
+  $('rBody').innerHTML=`최종 ${roundWins.blue} : ${roundWins.red}<br>
+    팀 내 ${rank+1}등${isMvp?' · <b style="color:#ffd166">★ 전체 MVP</b>':''} → <b style="color:${real<0?'#ff8a8a':'#7dffb0'}">${real>=0?'+':''}${real}점</b> ${isMvp?`(MVP ${MVP_PTS}점)`:`(${win?'승리':'패배'} 팀 ${rank+1}등)`}<br>
+    티어 ${tb.label} → ${ta.label} · ${ta.last?`+${ta.into}`:`${ta.into}/${TIER_PTS}`}점 ${up?'<b style="color:#7dffb0">⬆ 승급!</b>':''}${down?'<b style="color:#ff8a8a">⬇ 강등</b>':''}<br>
+    프로필 레벨 ${win?'+2':'+1'} → <b>Lv.${me.level}</b>
+    <table style="margin-top:10px;font-size:13px"><tr><th>#</th><th>이름</th><th>킬/데스/어시</th><th>피해</th></tr>${
+      all.map((x,i)=>`<tr style="color:${x.team==='blue'?'#8fc2ff':'#ff9a9a'}"><td>${i+1}${x===mvp?'★':''}</td><td>${x.name}${x===player?' (나)':''}</td><td>${x.kills}/${x.deaths}/${x.assists||0}</td><td>${Math.round(x.dealt)}</td></tr>`).join('')}</table>`;
+  show('s-result');
+}
+
+/* ===== 충돌 / 시야 ===== */
+function inObstacle(p,r){
+  for(const o of obstacles){
+    const b=o.geometry.parameters, dx=Math.abs(p.x-o.position.x), dz=Math.abs(p.z-o.position.z);
+    if(dx<b.width/2+r && dz<b.depth/2+r) return true;
+  }
+  return false;
+}
+function tryMove(pos,dx,dz,r){
+  const nx=pos.clone(); nx.x+=dx; if(!inObstacle(nx,r)&&Math.abs(nx.x)<58) pos.x=nx.x;
+  const nz=pos.clone(); nz.z+=dz; if(!inObstacle(nz,r)&&Math.abs(nz.z)<58) pos.z=nz.z;
+}
+function hasLOS(a,b){
+  const from=new THREE.Vector3(a.x,1.5,a.z), to=new THREE.Vector3(b.x,1.5,b.z), dir=to.clone().sub(from), dist=dir.length();
+  const rc=new THREE.Raycaster(from,dir.normalize(),0,dist);
+  return rc.intersectObjects(obstacles).length===0;
+}
+
+/* ===== 전투 ===== */
+function feedKill(src,t,zone,assisters,dealt,wn){   // 발로란트식 킬 피드: 누가 · 무슨 총으로 · 누구를 · (헤드샷) · 어시스트
+  const col=x=>x.team==='blue'?'#8fc2ff':'#ff9a9a', f=$('feed'), row=document.createElement('div');
+  row.className='fk'+((src.isPlayer||t.isPlayer)?' mine':'');
+  const mk=(tag,txt,c,cls)=>{ const e=document.createElement(tag); e.textContent=txt; if(c) e.style.color=c; if(cls) e.className=cls; return e; };
+  row.append(mk('b',src.name,col(src)), mk('span',`[${wn||src.weapon.name}]`,null,'fw'));
+  if(zone==='head') row.append(mk('span','🎯헤드샷',null,'hs'));
+  row.append(mk('span','▶ '), mk('b',t.name,col(t)), mk('span',` (${dealt})`,'#bbb'));
+  if(assisters.length) row.append(mk('span',`+ 어시스트 ${assisters.map(a=>a.name).join(', ')}`,null,'as'));
+  f.appendChild(row); while(f.children.length>6) f.firstChild.remove();
+  setTimeout(()=>row.remove(),6000);
+}
+function scheduleEnd(win,ms){   // 마지막 처치 뒤 잠깐(에이스면 더 길게) 보여준 다음 라운드를 끝냄
+  if(endPending) return; endPending=true; clearTimeout(endTimer);
+  endTimer=setTimeout(()=>{ endPending=false; if(running) endRound(win); },ms);
+}
+function showAce(src){   // 화면 위에 거대한 "에이스" (적 팀이 해도 모두에게 표시)
+  const a=$('ace'), c=src.team==='blue'?'#ffd166':'#ff5a5a';
+  a.innerHTML='<div class="at">에이스</div><div class="an"></div>'; a.style.color=c;
+  const n=a.querySelector('.an'); n.textContent=`${src.name}${src.isPlayer?' (나)':''} · ${src.team==='blue'?'아군':'적군'} 전원 처치`; n.style.color=src.team==='blue'?'#8fc2ff':'#ff9a9a';
+  a.style.display='block'; $('kbanner').style.display='none';
+  clearTimeout(showAce.t); showAce.t=setTimeout(()=>{a.style.display='none'},2900);
+}
+/* 위쪽 하마 7마리 × 양 팀 (죽으면 ✖) */
+let tbIcons=[];
+function buildTeamBar(){
+  tbIcons=[];
+  [['blue','tmBlue'],['red','tmRed']].forEach(([team,id])=>{
+    const box=$(id); box.innerHTML='';
+    ents.filter(x=>x.team===team).sort((a,b)=>a.slot-b.slot).forEach(e=>{
+      const el=document.createElement('div'); el.className='hm'+(e.isPlayer?' me':''); el.style.setProperty('--tc',team==='blue'?'#4f8cff':'#ff5a5a'); el.title=e.name;
+      const hi=document.createElement('span'); hi.className='hi'; hi.textContent='🦛'; el.appendChild(hi); box.appendChild(el); tbIcons.push({e,el});
+    });
+  });
+}
+function refreshTeamBar(){ tbIcons.forEach(({e,el})=>el.classList.toggle('dead',!!e.dead)); }
+function feed(t){ const d=document.createElement('div'); d.textContent=t; $('feed').appendChild(d); setTimeout(()=>d.remove(),4000); }
+
+const ZN={head:'헤드',body:'몸통',leg:'다리'};
+/* 킬 배너: 한 라운드에 내가 처치한 수가 늘수록 점점 화려해지고, 7킬은 에이스 */
+const KB=['','킬','더블 킬','트리플 킬','쿼드라 킬','펜타 킬','헥사 킬'];
+let _ac=null;
+function beep(n){
+  try{
+    _ac=_ac||new (window.AudioContext||window.webkitAudioContext)(); const t=_ac.currentTime, cnt=Math.min(4,1+Math.floor(n/2));
+    for(let i=0;i<cnt;i++){ const o=_ac.createOscillator(), g=_ac.createGain();
+      o.type=n>=7?'sawtooth':'triangle'; o.frequency.value=330*Math.pow(1.122,n*2+i*4);
+      g.gain.setValueAtTime(.1,t+i*.08); g.gain.exponentialRampToValueAtTime(.001,t+i*.08+.28);
+      o.connect(g); g.connect(_ac.destination); o.start(t+i*.08); o.stop(t+i*.08+.3); }
+  }catch(e){}
+}
+function killBanner(n,name){
+  n=Math.min(7,n); const b=$('kbanner');
+  b.className='k'+n;
+  b.innerHTML=n===7?`<div class="kt">✦ ACE ✦</div><div class="ks">에이스! 한 라운드에 적 전원 처치</div>`:`<div class="kt">${KB[n]}${n>1?'!':''}</div><div class="ks">${n}킬 · ${name}</div>`;
+  b.style.display='none'; void b.offsetWidth; b.style.display='block';      // 애니메이션 다시 시작
+  if(n===7){ const f=$('flash'); f.style.display='none'; void f.offsetWidth; f.style.display='block'; }
+  beep(n); clearTimeout(killBanner.t); killBanner.t=setTimeout(()=>{ b.style.display='none'; },n===7?3500:n>=4?2600:2000);
+}
+function xFlash(text){
+  const x=$('xmark'); x.innerHTML=`<b>✖</b>${text}`; x.style.display='block';
+  clearTimeout(xFlash.t); xFlash.t=setTimeout(()=>{x.style.display='none'},3000);
+}
+function damage(t,d,src,zone,wname){
+  if(t.dead||!roundActive||endPending) return;
+  t.dmgFrom[src.name]=(t.dmgFrom[src.name]||0)+d; (t.dmgT=t.dmgT||{})[src.name]=performance.now()/1000; src.dealt+=d; t.lastZone=zone||'body';
+  if(src.isPlayer) rDealt+=d;
+  if(t.isPlayer) rTaken+=d;
+  if(t.shield>0){ const a=Math.min(t.shield,d); t.shield-=a; d-=a; }   // 보호막이 먼저 피해를 흡수
+  t.hp-=d;
+  if(!t.isPlayer&&t.hp>0&&src&&src.g){ t.alert=4; t.alertPos=src.g.position.clone(); }   // 맞으면 쏜 쪽으로 반응
+  if(t.hp<=0){
+    t.dead=true; t.deaths++; t.g.visible=false; src.kills++;
+    const dealt=Math.round(t.dmgFrom[src.name]), zl=ZN[t.lastZone];
+    /* 어시스트: 처치한 사람 외에 최근 10초 안에 25 이상 피해를 준 적 팀 */
+    const nowT=performance.now()/1000, assisters=[];
+    for(const nm in t.dmgFrom){ if(nm===src.name) continue; const a=ents.find(x=>x.name===nm);
+      if(a&&a.team!==t.team&&t.dmgFrom[nm]>=25&&nowT-((t.dmgT||{})[nm]||0)<=10){ a.assists=(a.assists||0)+1; assisters.push(a); } }
+    feedKill(src,t,t.lastZone,assisters,dealt,wname);
+    if(src.isPlayer){ xFlash(`${t.name} 처치<br><small>${dealt} 데미지를 넣어 처치 (마지막 ${zl} 명중)</small>`); rKills++; killBanner(rKills,t.name); tutAdv(2); }
+    if(t.isPlayer){
+      const taken=Math.round(Object.values(t.dmgFrom).reduce((a,b)=>a+b,0));
+      xFlash(`전사<br><small><b>${src.name}</b> (${wname||src.weapon.name} · 남은 체력 ${Math.max(1,Math.ceil(src.hp))})에게 처치당함 · 마지막 ${zl} 피격${assisters.length?` · 어시스트 ${assisters.map(a=>a.name).join(', ')}`:''}<br>이번 라운드 총 ${taken} 데미지를 받음</small>`);
+      specIdx=0;
+    }
+    src.rk=(src.rk||0)+1;
+    const na=alive(t.team).length;
+    const ace=(na===0&&src.rk>=ents.filter(x=>x.team===t.team).length);   // 한 명이 적 전원을 처치 = 에이스
+    if(na===1){   // 한 명 남으면 시스템 메시지(팀 채팅)
+      if(t.team==='red'&&!warnRed){ warnRed=true; addChat('team','시스템','sys','적군이 한 명 남았습니다.'); }
+      else if(t.team==='blue'&&!warnBlue){ warnBlue=true; addChat('team','시스템','sys','아군이 1명 남았습니다.'); }
+    }
+    if(ace) showAce(src);
+    if(alive('red').length===0) scheduleEnd('blue',ace?3000:1200);
+    else if(alive('blue').length===0) scheduleEnd('red',ace?3000:1200);
+  }
+  updateHud();
+}
+
+/* 전사 후 팀원 관전: 살아있는 팀원을 뒤에서 따라가며 보고, 클릭하면 다음 팀원으로 전환 */
+function spectate(){
+  const mates=alive('blue').filter(x=>!x.isPlayer), d=$('dead');
+  if(vmHold) vmHold.visible=false;
+  if(!mates.length){ d.style.display='none'; return; }
+  const m=mates[specIdx%mates.length], r=m.g.rotation.y, p=m.g.position;
+  camera.position.set(p.x-Math.sin(r)*6, 4, p.z-Math.cos(r)*6);
+  camera.lookAt(p.x,1.6,p.z);
+  d.style.display='block'; d.innerHTML=`관전 중: <b>${m.name}</b> · 마우스 클릭으로 다음 팀원`;
+}
+
+/* 튜토리얼 안내 */
+const TUT=[
+  'WASD로 이동, 마우스로 시점, Shift로 점프, Ctrl(또는 C)을 누르는 동안 앉기를 해 보세요. 왼쪽 위 미니맵에서 내 위치(흰 삼각형)와 아군(파랑)을 볼 수 있어요. V 키를 누르는 동안 말하면 누가 말하는지 표시돼요. (닉네임을 만든 뒤 튜토리얼을 마쳐야 로비에 들어갈 수 있어요)',
+  '마우스 또는 스페이스바로 발사! 오른쪽 마우스를 누르고 있으면 줌이 됩니다. 헤드 > 몸통 > 다리 순으로 데미지가 크고, 머리 한가운데를 맞혀야 헤드샷이에요. 거리가 멀면 데미지가 줄어듭니다. 연사하면 반동으로 총구가 위로 튑니다.',
+  '목표는 적 전원 처치! 적 7명을 모두 쓰러뜨리면 라운드 승리예요. R로 재장전(2초)할 수 있고, TAB 키를 누르고 있으면 킬/데스/어시 점수판이 나와요. Enter는 팀 채팅, Shift+Enter는 전체 채팅이에요. 위쪽 하마 아이콘은 양 팀 생존 현황(죽으면 ✖), 숫자 3은 근접 무기(좌클릭 베기·우클릭 강공격), 1은 총이에요.',
+  '이기면 돈을 받아 라운드 사이에 보호막을 살 수 있고(진 팀은 80%), 라운드를 이길 때마다 새 총이 해금되고, 대기 시간에 해금된 총 중에서 골라 바꿀 수 있어요. 죽으면 클릭해서 팀원을 관전하세요. 100초 안에 못 끝내면 무승부!'
+];
+function tutShow(){
+  const t=$('tut');
+  if(!tutorial){ t.style.display='none'; return; }
+  const i=Math.min(tutStep,TUT.length-1);
+  t.style.display='block'; t.innerHTML=`🎓 튜토리얼 ${i+1}/${TUT.length}<br>${TUT[i]}`;
+}
+function tutAdv(step){ if(tutorial&&tutStep===step){ tutStep++; tutShow(); } }
+
+const ZCOL={head:'#ff5a5a',body:'#ffd166',leg:'#7ab8ff'};
+function showHit(z,d,dist){   // 조준점 아래에 맞힌 부위 / 데미지 / 거리 표시
+  const h=$('hitinfo'); h.textContent=`${ZN[z]} ${d} · ${Math.round(dist)}m`; h.style.color=ZCOL[z]; h.style.display='block';
+  clearTimeout(showHit.t); showHit.t=setTimeout(()=>{h.style.display='none'},500);
+}
+function startReload(){
+  if(meleeOn||reloadT>0||mag>=player.weapon.mag||reserve<=0) return;
+  const w=player.weapon, miss=w.mag-mag;
+  reloadMax=Array.isArray(w.reload)?w.reload[Math.min(miss,w.reload.length)-1]:w.reload;
+  reloadT=reloadMax;
+}
+function finishReload(){
+  const need=player.weapon.mag-mag, take=Math.min(need,reserve);
+  mag+=take; reserve-=take; updateHud();
+}
+
+function shoot(){
+  const w=player.weapon;
+  camera.updateMatrixWorld(true);
+  const rc=new THREE.Raycaster(); rc.setFromCamera({x:0,y:0},camera);
+  if(w.spread){   // 탄퍼짐: 연사할수록 커짐
+    const sp=w.spread[0]+(w.spread[1]-w.spread[0])*heat, ang=Math.random()*6.2832, m=Math.sqrt(Math.random())*sp;
+    const rv=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,0), uv=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1);
+    rc.ray.direction.addScaledVector(rv,Math.cos(ang)*m).addScaledVector(uv,Math.sin(ang)*m).normalize();
+    heat=Math.min(1,heat+.07);
+  }
+  const targets=[...obstacles];
+  ents.forEach(e=>{ if(!e.dead&&e.team!==player.team) targets.push(...e.parts); });
+  const hit=rc.intersectObjects(targets,false)[0];
+  if(hit&&hit.object.userData.ent){
+    const e=hit.object.userData.ent; let z=hit.object.userData.zone;
+    if(z==='head'){ const hv=new THREE.Vector3(); e.hd.getWorldPosition(hv); if(hit.point.distanceTo(hv)>HEAD_R) z='body'; }   // 머리 중심 가까이 맞아야만 헤드샷
+    const dmg=dmgAt(w,z,hit.distance);
+    showHit(z,dmg,hit.distance); damage(e,dmg,player,z);
+  }
+}
+
+function animEnt(e,dt){   // 걷기(다리 스윙·몸 흔들림), 총 반동, 숨쉬기
+  const sp=e.g.position.distanceTo(e.prev)/Math.max(dt,.001); e.prev.copy(e.g.position);
+  e.walk+=Math.min(sp,8)*dt*1.6;
+  const k=Math.min(1,sp/4), amp=k*.7, t=performance.now()/1000;
+  e.legs[0].rotation.x= Math.sin(e.walk*2)*amp; e.legs[1].rotation.x=-Math.sin(e.walk*2)*amp;
+  e.hip.position.y=Math.abs(Math.sin(e.walk*2))*.05*k;
+  e.kick=Math.max(0,e.kick-dt*7);
+  e.rArm.rotation.x=-Math.PI/2-e.kick*.25+Math.sin(t*2+e.g.id)*.02;
+  e.lArm.rotation.x=-1.2-e.kick*.15+Math.sin(t*2+e.g.id)*.03;
+  e.gunHolder.position.z=.45-e.kick*.12;
+}
+/* ===== 봇 AI =====
+   - 시야(앞쪽 넓은 각도, 70m, 장애물에 가리지 않을 때)에 들어온 적을 인식하고 쫓아가며 사격
+   - 한 명이 본 적 위치는 팀 전체가 공유(콜아웃), 맞으면 쏜 쪽으로 반응
+   - 아무 정보가 없으면 맵을 돌아다니며 수색, 25초가 지나면 적 대략 위치를 알고 밀고 들어감
+   - 장애물에 막히면 돌아가고, 끼이면 방향을 바꿔 빠져나옴 */
+const BOT_VIEW=70;
+let intel={blue:null,red:null};
+const roundElapsed=()=>ROUND_TIME-roundT;
+function botScan(e){
+  const pos=e.g.position, fx=Math.sin(e.g.rotation.y), fz=Math.cos(e.g.rotation.y);
+  let best=null, bd=1e9;
+  for(const f of ents){
+    if(f.dead||f.team===e.team) continue;
+    const d=pos.distanceTo(f.g.position); if(d>BOT_VIEW||d>=bd) continue;
+    const dx=(f.g.position.x-pos.x)/d, dz=(f.g.position.z-pos.z)/d;
+    if(d>9 && dx*fx+dz*fz<-.3) continue;                 // 뒤쪽은 가까이(소리)서만 알아챔
+    if(!hasLOS(pos,f.g.position)) continue;
+    best=f; bd=d;
+  }
+  return best;
+}
+function randFree(xr,zA,zB){
+  for(let i=0;i<20;i++){
+    const p=new THREE.Vector3((Math.random()*2-1)*xr,0,zA+Math.random()*(zB-zA));
+    if(!inObstacle(p,1.6)) return p;
+  }
+  return new THREE.Vector3(0,0,0);
+}
+function steerDir(e,dx,dz){   // 장애물이 있으면 비켜서 갈 방향을 고름
+  const L=Math.hypot(dx,dz); if(L<.01) return [0,0];
+  const ux=dx/L, uz=dz/L, pos=e.g.position, pr=new THREE.Vector3();
+  for(const a of [0,.6,-.6,1.2,-1.2,1.9,-1.9]){
+    const ang=a*e.side, c=Math.cos(ang), sn=Math.sin(ang), vx=ux*c-uz*sn, vz=ux*sn+uz*c;
+    pr.set(pos.x+vx*2.4,0,pos.z+vz*2.4);
+    if(!inObstacle(pr,.95)&&Math.abs(pr.x)<57&&Math.abs(pr.z)<57) return [vx*L,vz*L];
+  }
+  return [ux*L,uz*L];
+}
+function botAI(e,dt){
+  const pos=e.g.position, now=roundElapsed();
+  e.scanT-=dt; e.memT+=dt; e.reactT-=dt; e.cool-=dt; if(e.alert>0) e.alert-=dt;
+  /* 1) 인식 */
+  if(e.scanT<=0){
+    e.scanT=.15+Math.random()*.1;
+    const s=botScan(e);
+    if(s){
+      if(e.tgt!==s) e.reactT=tutorial?.6:.3;             // 처음 발견하면 잠깐 반응 시간
+      e.tgt=s; e.memT=0; e.mem=s.g.position.clone(); intel[e.team]={p:s.g.position.clone(),t:now};
+    } else e.tgt=null;
+  }
+  if(e.tgt&&e.tgt.dead) e.tgt=null;
+  const t=e.tgt;
+  /* 2) 어디로 갈지 */
+  let dest=null, dvx=0, dvz=0, face=null, spd=5.6, wantMove=true;
+  const st=Math.sin(performance.now()/800+e.g.id*1.7);
+  if(t){
+    const tp=t.g.position, d=pos.distanceTo(tp), toT=new THREE.Vector3(tp.x-pos.x,0,tp.z-pos.z).normalize();
+    face=toT;
+    const side=[-toT.z*st,toT.x*st];                      // 좌우 이동(스트레이핑)
+    if(d>26){ dvx=toT.x*spd; dvz=toT.z*spd; }             // 멀면 거리를 좁힘
+    else if(d>11){ dvx=toT.x*2+side[0]*4.5; dvz=toT.z*2+side[1]*4.5; }
+    else { const back=d<5?-2.5:0; dvx=toT.x*back+side[0]*5; dvz=toT.z*back+side[1]*5; }
+  } else {
+    if(e.alert>0&&e.alertPos) dest=e.alertPos;
+    else if(e.mem&&e.memT<7) dest=e.mem;
+    else if(intel[e.team]&&now-intel[e.team].t<8) dest=intel[e.team].p;
+    else if(now>25){                                      // 오래 못 찾으면 적 대략 위치로 압박
+      const foes=ents.filter(x=>x.team!==e.team&&!x.dead);
+      if(foes.length){ const f=foes.reduce((a,b)=>pos.distanceTo(a.g.position)<pos.distanceTo(b.g.position)?a:b);
+        dest=new THREE.Vector3(f.g.position.x+(Math.random()-.5)*8,0,f.g.position.z+(Math.random()-.5)*8); }
+    }
+    if(!dest){                                            // 수색: 상대 진영 쪽부터 돌아다님
+      if(!e.wp||Math.hypot(e.wp.x-pos.x,e.wp.z-pos.z)<3){
+        const toward=e.team==='blue'?-1:1;
+        e.wp=Math.random()<.65?randFree(40,toward*8,toward*48):randFree(40,-48,48);
+      }
+      dest=e.wp;
+    }
+    const dx=dest.x-pos.x, dz=dest.z-pos.z, dd=Math.hypot(dx,dz);
+    if(dd<2.5){ if(dest===e.mem) e.mem=null; if(dest===e.alertPos) e.alert=0; if(dest===e.wp) e.wp=null; wantMove=false; }
+    else { dvx=dx/dd*spd; dvz=dz/dd*spd; }
+    if(e.mem&&dd<4) e.mem=null;
+  }
+  /* 3) 끼임 감지: 움직이려는데 못 가면 방향을 바꿔 빠져나옴 */
+  e.stuckT+=dt;
+  if(e.stuckT>.7){
+    const mv=pos.distanceTo(e.stuckP); e.stuckP.copy(pos); e.stuckT=0;
+    if(mv<.5&&wantMove&&Math.hypot(dvx,dvz)>2){ e.side*=-1; e.wp=null; e.mem=null; e.unstick=.8; const a=Math.random()*6.283; e.ux=Math.cos(a)*5.5; e.uz=Math.sin(a)*5.5; }
+  }
+  if(e.unstick>0){ e.unstick-=dt; dvx=e.ux; dvz=e.uz; }
+  const sd=steerDir(e,dvx,dvz); dvx=sd[0]; dvz=sd[1];
+  if(!face){ face=(Math.hypot(dvx,dvz)>.5)?new THREE.Vector3(dvx,0,dvz).normalize():(e.alertPos?new THREE.Vector3(e.alertPos.x-pos.x,0,e.alertPos.z-pos.z).normalize():new THREE.Vector3(Math.sin(e.g.rotation.y),0,Math.cos(e.g.rotation.y))); }
+  const ta=Math.atan2(face.x,face.z); let da=ta-e.g.rotation.y; da=Math.atan2(Math.sin(da),Math.cos(da));
+  e.g.rotation.y+=da*Math.min(1,dt*8);                    // 갑자기 돌지 않고 부드럽게 회전
+  e.vx+=(dvx-e.vx)*Math.min(1,dt*6); e.vz+=(dvz-e.vz)*Math.min(1,dt*6);
+  tryMove(pos,e.vx*dt,e.vz*dt,.8);
+  /* 4) 사격 */
+  if(t&&e.cool<=0&&e.reactT<=0){
+    const w=e.weapon, d=pos.distanceTo(t.g.position);
+    e.cool=Math.max(1/w.rate,.18)*(1.3+Math.random()*.5);
+    e.kick=1;
+    let p=Math.max(.1,.35-d*.006); if(tutorial) p*=.6;      // 멀수록 잘 안 맞음
+    if(Math.random()<p){ const q=Math.random(), z=q<.12?'head':q<.8?'body':'leg'; damage(t,dmgAt(w,z,d),e,z); }
+  }
+}
+
+function updateHud(){
+  const w=player.weapon; refreshTeamBar();
+  $('score').innerHTML=`<span style="color:#8fc2ff">아군 ${roundWins.blue}</span> : <span style="color:#ff9a9a">${roundWins.red} 적군</span> (먼저 ${goal()}승)<br><small>라운드 ${round} · 생존 ${alive('blue').length} vs ${alive('red').length} · ${Math.max(0,Math.ceil(roundT))}초</small>`;
+  $('info').textContent=`${meleeOn?MELEE.name:w.name} · 돈 ${money}/${MONEY_MAX}`;
+  $('ammo').innerHTML=meleeOn?'근접<small>좌클릭 베기 · 우클릭 강공격 · 1: 총</small>':`${mag} / ${reserve}<small>${reloadT>0?`재장전 중 ${reloadT.toFixed(1)}s`:(mag===0&&reserve===0?'탄약 없음':'R: 재장전')}</small>`;
+  $('hpfill').style.width=Math.max(0,player.hp/MAX_HP*100)+'%';
+  $('shfill').style.width=(player.shield/SHIELD_MAX*100)+'%';
+  $('hptext').textContent=`${Math.ceil(Math.max(0,player.hp))}/${MAX_HP}`;
+  $('shtext').textContent=`보호막 ${Math.ceil(player.shield)}/${SHIELD_MAX}`;
+}
+
+function loop(){
+  if(!running) return;
+  raf=requestAnimationFrame(loop);
+  const dt=Math.min(clock.getDelta(),.05);
+  $('lockhint').style.display=(document.pointerLockElement===renderer.domElement||chatOpen)?'none':'block';
+  /* 줌 (우클릭 누르는 동안) */
+  heat=Math.max(0,heat-dt*1.2);
+  const zl=player.weapon.zoom, tf=(!player.dead&&zoomOn&&zl.length)?zoomFov(zl[Math.min(zoomLvl,zl.length-1)]):75;
+  camera.fov+=(tf-camera.fov)*Math.min(1,dt*14); camera.updateProjectionMatrix();
+  scoped=(!player.dead&&zoomOn&&player.weapon===WEAPONS[3]&&camera.fov<45);
+  $('scope').style.display=scoped?'block':'none';
+  rectOn=(!player.dead&&zoomOn&&player.weapon!==WEAPONS[3]&&camera.fov<72);   // 스나이퍼 외 총기: 발로란트식 사각 조준창
+  $('scope2').style.display=rectOn?'block':'none';
+  $('cross').style.visibility=(scoped||rectOn)?'hidden':'visible';
+  /* 플레이어 */
+  if(!player.dead){
+    const f=(keys.KeyW?1:0)-(keys.KeyS?1:0), s=(keys.KeyD?1:0)-(keys.KeyA?1:0), crouching=!!(keys.ControlLeft||keys.ControlRight||keys.KeyC), sp=9*dt*(meleeOn?MELEE.moveMul:(player.weapon.moveMul||1))*(crouching?.5:1);
+    const fx=-Math.sin(yaw), fz=-Math.cos(yaw), rx=Math.cos(yaw), rz=-Math.sin(yaw);
+    tryMove(player.g.position,(fx*f+rx*s)*sp,(fz*f+rz*s)*sp,.7);
+    if(f||s){ moved+=dt; if(moved>1.5) tutAdv(0); }
+    vmTick(dt,!!(f||s));
+    crouch=crouching; eyeCur+=((crouch?1.05:1.7)-eyeCur)*Math.min(1,dt*14);   // 앉으면 눈높이가 낮아짐
+    if((keys.ShiftLeft||keys.ShiftRight)&&onGround&&!crouch){vy=9;onGround=false;}
+    vy-=25*dt; camera.position.y+=vy*dt;
+    if(camera.position.y<=eyeCur){camera.position.y=eyeCur;vy=0;onGround=true;}
+    camera.position.x=player.g.position.x; camera.position.z=player.g.position.z;
+    recP-=recP*Math.min(1,dt*3.5); recY-=recY*Math.min(1,dt*3.5);   // 반동은 서서히 회복
+    camera.rotation.set(Math.max(-1.5,Math.min(1.5,pitch+recP)),yaw+recY,0,'YXZ');
+    /* 재장전 / 발사 (마우스를 누르고 있으면 계속 발사) */
+    if(reloadT>0){ reloadT-=dt; if(reloadT<=0){ reloadT=0; finishReload(); } }
+    shotCool-=dt; meleeCool-=dt;
+    if(meleeOn){ if((mouseDown||keys.Space)&&meleeCool<=0) meleeHit(false); }
+    else if((mouseDown||keys.Space) && reloadT<=0 && shotCool<=0){
+      if(mag>0){ shoot(); vmKick=1; recP+=player.weapon.recoil; recY+=(Math.random()-.5)*player.weapon.recoil*.8; mag--; shotCool=1/player.weapon.rate; tutAdv(1); }
+      else startReload();                              // 탄창이 비면 자동 재장전
+    }
+  } else spectate();
+  /* 봇 */
+  ents.forEach(e=>{ if(!e.dead&&!e.isPlayer){ botAI(e,dt); animEnt(e,dt); } });
+  mmTick(dt); voiceTick(dt); sbTick(dt);
+  /* 100초 안에 못 끝내면 무승부 */
+  roundT-=dt;
+  if(roundT<=0 && roundActive && !endPending){ endRound('draw'); return; }
+  updateHud();
+  renderer.render(scene,camera);
+}
+
+/* ===== 입력 ===== */
+addEventListener('keydown',e=>{
+  if(running&&player&&!chatOpen&&e.code==='Enter'&&!e.repeat){ e.preventDefault(); openChat(e.shiftKey?'all':'team'); return; }
+  if(chatOpen) return;
+  if(running&&player&&!player.dead&&!e.repeat){ if(e.code==='Digit3') switchMelee(true); else if(e.code==='Digit1'||e.code==='Digit2') switchMelee(false); }
+  keys[e.code]=true; if(running&&(e.code==='Space'||e.ctrlKey)) e.preventDefault();
+  if(e.code==='Tab'){ e.preventDefault(); if(running&&!e.repeat) showSb(); return; }
+  if(e.code==='KeyV'&&!e.repeat) setMic(true);
+  if(e.code==='KeyR'&&running&&player&&!player.dead) startReload();
+});
+addEventListener('keyup',e=>{ keys[e.code]=false; if(running&&e.code==='Space') e.preventDefault(); if(e.code==='KeyV') setMic(false); if(e.code==='Tab'){ e.preventDefault(); hideSb(); } });
+addEventListener('blur',()=>{ hideSb(); setMic(false); keys={}; });
+addEventListener('mousedown',e=>{
+  if(!running) return;
+  if(chatOpen){ closeChat(true); return; }
+  if(document.pointerLockElement!==renderer.domElement){ lockPtr(); return; }
+  if(e.button===2){ if(meleeOn){ if(player&&!player.dead&&meleeCool<=0) meleeHit(true); return; } if(player&&player.weapon.zoom.length){ zoomOn=true; zoomLvl=0; } return; }          // 우클릭: 줌
+  if(player&&player.dead) specIdx++;
+  else mouseDown=true;
+});
+addEventListener('mouseup',e=>{ if(e.button===2) zoomOn=false; else mouseDown=false; });
+addEventListener('contextmenu',e=>{ if(running) e.preventDefault(); });
+addEventListener('mousemove',e=>{
+  if(!running||document.pointerLockElement!==renderer.domElement) return;
+  vmSwayX=Math.max(-.08,Math.min(.08,vmSwayX+e.movementX*.0008)); vmSwayY=Math.max(-.08,Math.min(.08,vmSwayY+e.movementY*.0008));
+  const sens=camera.fov/75;   // 줌 중에는 감도 낮춤
+  yaw-=e.movementX*.0022*sens; pitch=Math.max(-1.5,Math.min(1.5,pitch-e.movementY*.0022*sens));
+});
+$('bPlay').onclick=enterQueue;
+
+/* 조준점 크기: 마우스 휠 위(크게) / 아래(작게)로 조절, 브라우저에 저장 */
+let crossSize=6;
+try{ crossSize=+localStorage.getItem('hw3_cross3')||6; }catch(e){}
+function applyCross(showInfo){
+  crossSize=Math.max(3,Math.min(48,crossSize));
+  $('cross').style.setProperty('--cs',crossSize+'px');
+  try{ localStorage.setItem('hw3_cross3',crossSize); }catch(e){}
+  if(showInfo){ const i=$('crossinfo'); i.textContent=`조준점 크기 ${crossSize} (마우스 휠 위/아래)`; i.style.display='block'; clearTimeout(applyCross.t); applyCross.t=setTimeout(()=>{i.style.display='none'},1200); }
+}
+addEventListener('wheel',e=>{ if(!running) return; e.preventDefault();
+  if(zoomOn&&player&&player.weapon.zoom.length>1){   // 줌 중 휠: 배율 전환 (오토건 2.5x ↔ 5x)
+    const zl=player.weapon.zoom; zoomLvl=Math.max(0,Math.min(zl.length-1,zoomLvl+(e.deltaY<0?1:-1)));
+    const i=$('crossinfo'); i.textContent=`배율 ${zl[zoomLvl]}x`; i.style.display='block'; clearTimeout(applyCross.t); applyCross.t=setTimeout(()=>{i.style.display='none'},900); return; } crossSize+=e.deltaY<0?1:-1; applyCross(true); },{passive:false});
+applyCross(false);
+$('bTut').onclick=()=>startMatch(true);
+
+/* ===== 보이스 (초안: 내 마이크 + 말하는 사람 표시) =====
+   TODO: 실제 팀 보이스는 WebRTC + Firebase 시그널링으로 같은 팀을 연결하고,
+         상대 음성이 들어올 때 setSpeaking(닉네임, true/false)만 호출하면 같은 표시가 나옵니다. */
+let micStream=null, micCtx=null, micAn=null, micBuf=null, micWant=false, micLevelOn=false;
+const speaking={};   // 닉네임 → 팀(말하는 중인 사람)
+function setSpeaking(name,on,team){
+  if(on){ if(speaking[name]) return; speaking[name]=team||'blue'; } else { if(!speaking[name]) return; delete speaking[name]; }
+  renderVoice();
+}
+function renderVoice(){
+  const v=$('voice'), names=Object.keys(speaking);
+  v.style.display=names.length?'flex':'none';
+  v.innerHTML=names.map(n=>`<div class="vrow ${speaking[n]==='red'?'red':''}">🔊 ${n}</div>`).join('');
+}
+async function setMic(on){
+  const el=$('mic');
+  micWant=on;
+  if(on){
+    if(!micStream){
+      try{ micStream=await navigator.mediaDevices.getUserMedia({audio:true}); }catch(e){ el.textContent='🎤 마이크 권한이 필요합니다'; micWant=false; return; }
+      try{ micCtx=new (window.AudioContext||window.webkitAudioContext)(); const src=micCtx.createMediaStreamSource(micStream);
+        micAn=micCtx.createAnalyser(); micAn.fftSize=512; micBuf=new Uint8Array(micAn.fftSize); src.connect(micAn); }catch(e){ micAn=null; }
+    }
+    if(!micWant){ micStream.getAudioTracks().forEach(t=>t.enabled=false); return; }   // 권한창 뜨는 사이 키를 뗀 경우
+    if(micCtx&&micCtx.state==='suspended') micCtx.resume();
+    micStream.getAudioTracks().forEach(t=>t.enabled=true); el.classList.add('on'); el.textContent='🎤 마이크 켜짐';
+    micLevelOn=true;
+  } else {
+    if(micStream) micStream.getAudioTracks().forEach(t=>t.enabled=false);
+    el.classList.remove('on'); el.textContent='🎤 V 키를 누르는 동안 말하기';
+    micLevelOn=false; if(me&&player) setSpeaking(player.name,false);
+  }
+}
+let vcT=0;
+function voiceTick(dt){   // 마이크가 켜져 있고 실제로 소리가 날 때만 '말하는 중' 표시
+  vcT-=dt; if(vcT>0||!player) return; vcT=.1;
+  if(!micLevelOn||!micAn){ if(micLevelOn&&!micAn) setSpeaking(player.name,true,'blue'); return; }   // 분석 불가 시 마이크 켠 동안 표시
+  micAn.getByteTimeDomainData(micBuf);
+  let m=0; for(let i=0;i<micBuf.length;i++){ const x=Math.abs(micBuf[i]-128); if(x>m) m=x; }
+  if(m>8) { setSpeaking(player.name,true,'blue'); voiceTick.hold=.35; }
+  else { voiceTick.hold=(voiceTick.hold||0)-.1; if(voiceTick.hold<=0) setSpeaking(player.name,false); }
+}
+
+/* ===== TAB 점수판 (발로란트식: 누르고 있는 동안 표시) ===== */
+let sbOn=false, sbT=0;
+function sbRows(team){
+  return ents.filter(x=>x.team===team).sort((a,b)=>b.kills-a.kills||a.deaths-b.deaths||b.dealt-a.dealt)
+    .map(x=>`<tr class="${x.isPlayer?'me':''} ${x.dead?'dead':''}"><td>${x.name}${x.isPlayer?' (나)':''}</td><td>${x.kills}</td><td>${x.deaths}</td><td>${x.assists||0}</td><td>${Math.round(x.dealt)}</td></tr>`).join('');
+}
+function renderSb(){
+  const head='<tr><th>이름</th><th>킬</th><th>데스</th><th>어시</th><th>피해</th></tr>';
+  $('sb').innerHTML=`<div style="text-align:center;font-weight:bold;font-size:18px">${roundWins.blue} : ${roundWins.red} · 라운드 ${round}</div>
+    <h3 style="color:#8fc2ff">아군</h3><table>${head}${sbRows('blue')}</table>
+    <h3 style="color:#ff9a9a">적군</h3><table>${head}${sbRows('red')}</table>`;
+}
+function showSb(){ if(!running||!player) return; sbOn=true; renderSb(); $('sb').style.display='block'; }
+function hideSb(){ sbOn=false; const e=$('sb'); if(e) e.style.display='none'; }
+function sbTick(dt){ if(!sbOn) return; sbT-=dt; if(sbT<=0){ sbT=.25; renderSb(); } }
+
+/* ===== 랜덤 큐: 솔로 전용 7 vs 7 (파티 없음) · 시간이 끝나면 빈 자리는 봇이 채움 ===== */
+const QUEUE_WAIT=20, QUEUE_SIZE=14;
+let qT=0, qTimer=0, qHumans=1;
+function qChatAdd(who,text,sys){
+  const box=$('qChat'), d=document.createElement('div');
+  const b=document.createElement('b'); b.textContent=who+': '; b.style.color=sys?'#ffd166':'#8fc2ff';
+  const t=document.createElement('span'); t.textContent=text; if(sys) t.style.color='#ffe9a8';
+  d.append(b,t); box.appendChild(d); box.scrollTop=box.scrollHeight;
+}
+function qUpdate(){
+  $('qStat').innerHTML=`상대를 찾는 중… <b>${qHumans}/${QUEUE_SIZE}</b>명 · ${Math.ceil(Math.max(0,qT))}초 뒤 시작<br><small>빈 자리 ${QUEUE_SIZE-qHumans}개는 봇이 채워요</small>`;
+  $('qBar').style.width=Math.min(100,(1-qT/QUEUE_WAIT)*100)+'%';
+}
+function leaveQueue(){ clearInterval(qTimer); qTimer=0; }
+function enterQueue(){
+  if(qTimer) return;
+  qT=QUEUE_WAIT; qHumans=1;   // TODO: Firebase 연결 후 hw3/queue/{uid}에 등록하고, 같은 큐에 찾은 사람 수로 qHumans를 갱신
+  $('qChat').innerHTML=''; $('qIn').value=''; qUpdate(); show('s-queue');
+  qChatAdd('시스템','솔로 큐에 들어왔어요. 대기하는 동안 채팅할 수 있어요.',true);
+  qTimer=setInterval(()=>{
+    qT-=.25; qUpdate();
+    if(qT<=0||qHumans>=QUEUE_SIZE){ leaveQueue(); startMatch(false); }
+  },250);
+}
+$('qCancel').onclick=()=>{ leaveQueue(); show('s-lobby'); };
+$('qIn').addEventListener('keydown',e=>{
+  if(e.key!=='Enter') return; e.preventDefault();
+  const t=$('qIn').value.trim(); if(t){ qChatAdd(me.name,t,false); $('qIn').value=''; }   // TODO: Firebase로 전송
+});
+
+/* ===== 게임 중 채팅: Enter = 팀 채팅, Shift+Enter = 전체 채팅 ===== */
+let chatOpen=false, chatScope='team';
+function addChat(scope,from,team,text){
+  const log=$('chatlog'), d=document.createElement('div');
+  const tag=document.createElement('span'); tag.textContent=scope==='team'?'[팀] ':'[전체] '; tag.style.color=scope==='team'?'#7dffb0':'#ffd166';
+  const nm=document.createElement('b'); nm.textContent=from+': '; nm.style.color=team==='sys'?'#ffd166':team==='blue'?'#8fc2ff':'#ff9a9a';
+  const tx=document.createElement('span'); tx.textContent=text; if(team==='sys') tx.style.color='#ffe9a8';
+  d.append(tag,nm,tx); log.appendChild(d);
+  while(log.children.length>8) log.firstChild.remove();
+  setTimeout(()=>{ d.style.opacity=0; setTimeout(()=>d.remove(),600); },12000);
+}
+function openChat(scope){
+  if(!running||!player||chatOpen) return;
+  chatOpen=true; chatScope=scope; keys={}; mouseDown=false; zoomOn=false;
+  const sc=$('chatscope'); sc.textContent=scope==='team'?'[팀]':'[전체]'; sc.style.color=scope==='team'?'#7dffb0':'#ffd166';
+  $('chatbox').style.display='block'; $('chatin').value='';
+  try{ document.exitPointerLock(); }catch(e){}
+  $('chatin').focus();
+}
+function closeChat(relock){
+  chatOpen=false; $('chatbox').style.display='none'; $('chatin').blur();
+  if(relock&&running) lockPtr();
+}
+function chatSend(){
+  const text=$('chatin').value.trim(); if(!text) return;
+  addChat(chatScope,player.name,player.team,text);   // TODO: 정식 버전은 Firebase로 전송 (팀 채팅은 같은 팀만 수신)
+}
+$('chatin').addEventListener('keydown',e=>{
+  e.stopPropagation();
+  if(e.key==='Enter'){ e.preventDefault(); chatSend(); closeChat(true); }
+  else if(e.key==='Escape'){ closeChat(true); }
+});
+$('chatin').addEventListener('keyup',e=>e.stopPropagation());
+
+/* 자동 로그인 */
+(function(){ const k=localStorage.getItem('hw3_me'), r=reg(); if(k&&r[k]){ me=r[k]; enterLobby(); } })();
+</script>
+</body>
+</html>

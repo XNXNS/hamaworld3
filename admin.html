@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>하마월드 3 · 어드민</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b1020;color:#e8ecff;font-family:system-ui,'Malgun Gothic',sans-serif;font-size:15px}
+h1{font-size:22px;margin:0}
+button{background:#2d5fd6;color:#fff;border:0;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:14px}
+button.g{background:#2e8b57}button.r{background:#b8383e}button.x{background:#555}
+button:disabled{opacity:.4;cursor:default}
+input,select{background:#141b36;color:#fff;border:1px solid #3a4a8a;border-radius:6px;padding:6px 8px;font-size:14px}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+.card{background:#141b36;border:1px solid #26356e;border-radius:10px;padding:14px;margin-top:12px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.tabs{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.tabs button{background:#26356e}.tabs button.on{background:#2d5fd6}
+table{border-collapse:collapse;width:100%}
+th,td{padding:5px 8px;border-bottom:1px solid #26356e;text-align:left;vertical-align:top}
+th{color:#9db0ff;font-weight:600}
+.tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:12px;background:#26356e}
+.tag.dev{background:#a8741a}.tag.adm{background:#2e8b57}.tag.ban{background:#b8383e}
+.muted{color:#8f9bc7;font-size:13px}
+#msg{color:#ffd166;min-height:20px;margin-top:8px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 로그인 -->
+  <div id="login" class="card" style="max-width:420px;margin:60px auto">
+    <h1>하마월드 3 · 어드민</h1>
+    <p class="muted">개발자는 비밀번호만 입력하면 돼요. 어드민은 아래 "어드민은 이메일로 로그인"을 눌러 이메일도 입력하세요. (권한은 Firebase가 서버에서 확인하므로 이 페이지가 공개돼 있어도 안전해요.)</p>
+    <div class="row" id="emRow" hidden><input id="em" type="email" placeholder="이메일" autocomplete="username" style="flex:1"></div>
+    <div class="row" style="margin-top:8px"><input id="pw" type="password" placeholder="비밀번호" autocomplete="current-password" style="flex:1" autofocus></div>
+    <div class="row" style="margin-top:10px"><button id="bLogin">로그인</button><a href="#" id="toggleEm" class="muted">어드민은 이메일로 로그인</a></div>
+    <div id="lmsg" class="muted" style="margin-top:8px"></div>
+  </div>
+
+  <!-- 본문 -->
+  <div id="app" hidden>
+    <div class="top">
+      <h1>하마월드 3 · 어드민</h1>
+      <div class="row"><span id="who" class="muted"></span><span id="role" class="tag"></span><button id="bOut" class="x">로그아웃</button></div>
+    </div>
+    <div class="tabs">
+      <button data-t="reports" class="on">신고</button>
+      <button data-t="users">유저·정지</button>
+      <button data-t="presence">접속 현황</button>
+      <button data-t="admins" id="tAdmins">어드민 목록</button>
+    </div>
+    <div id="msg"></div>
+
+    <div id="p-reports" class="card"></div>
+
+    <div id="p-users" class="card" hidden>
+      <div class="row"><input id="uq" placeholder="닉네임 검색" style="flex:1;min-width:160px"><button id="uRefresh" class="x">새로고침</button></div>
+      <div id="uSel" class="card" hidden style="background:#0f1530">
+        <b id="uSelName"></b> <span id="uSelInfo" class="muted"></span>
+        <div class="row" style="margin-top:8px">
+          <input id="bDays" type="number" min="1" value="1" style="width:90px"> <span class="muted" id="bLimit"></span>
+          <input id="bReason" placeholder="사유 (100자 이내)" maxlength="100" style="flex:1;min-width:180px">
+          <button id="bBan" class="r">정지</button>
+          <button id="bUnban" class="g">정지 해제</button>
+          <button id="bKick" class="x">추방(kick)</button>
+        </div>
+        <div class="row" style="margin-top:8px" id="devRow">
+          <button id="bGrant" class="g">어드민 부여</button>
+          <button id="bRevoke" class="x">어드민 해제</button>
+          <input id="pts" type="number" min="0" style="width:110px" placeholder="점수">
+          <button id="bPts">점수 수정</button>
+          <span class="muted">(개발자 전용)</span>
+        </div>
+      </div>
+      <div style="overflow:auto;margin-top:10px"><table id="uTable"></table></div>
+    </div>
+
+    <div id="p-presence" class="card" hidden></div>
+    <div id="p-admins" class="card" hidden></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+/* ============ 설정: Firebase 콘솔 → 프로젝트 설정 → 내 앱(웹)의 값을 붙여넣으세요 ============
+   (이 값은 공개되어도 되는 값이에요. 실제 보호는 보안 규칙 + 로그인이 담당합니다.) */
+const FIREBASE_CONFIG = {
+  apiKey: "",
+  authDomain: "",
+  databaseURL: "",
+  projectId: "",
+  appId: ""
+};
+const DEV_EMAIL = 'simonlee2011@naver.com';   // 규칙 파일의 개발자 이메일과 같아야 해요
+const DAY = 86400000;
+
+const $ = id => document.getElementById(id);
+function h(tag, props, ...kids){
+  const e=document.createElement(tag);
+  for(const k in (props||{})){ if(k==='class') e.className=props[k]; else if(k.startsWith('on')) e[k]=props[k]; else e.setAttribute(k,props[k]); }
+  kids.flat().forEach(c=>e.append(c instanceof Node?c:document.createTextNode(c==null?'':String(c))));
+  return e;
+}
+function note(t){ $('msg').textContent=t||''; if(t) setTimeout(()=>{ if($('msg').textContent===t) $('msg').textContent=''; },5000); }
+const fmt = ts => ts ? new Date(ts).toLocaleString('ko-KR') : '-';
+
+if(!FIREBASE_CONFIG.apiKey){
+  $('lmsg').textContent='admin.html 안의 FIREBASE_CONFIG를 먼저 채워 주세요.';
+  $('bLogin').disabled=true;
+}else{
+  firebase.initializeApp(FIREBASE_CONFIG);
+}
+let auth, db, ST, isDev=false, uid='', bansMap={}, users=[], sel=null;
+if(FIREBASE_CONFIG.apiKey){ auth=firebase.auth(); db=firebase.database(); ST=firebase.database.ServerValue.TIMESTAMP; }
+
+let emailMode=false;   // false = 개발자(이메일은 DEV_EMAIL 고정, 비밀번호만 입력)
+$('toggleEm').onclick=e=>{
+  e.preventDefault(); emailMode=!emailMode; $('emRow').hidden=!emailMode;
+  $('toggleEm').textContent=emailMode?'← 개발자 로그인 (비밀번호만)':'어드민은 이메일로 로그인';
+};
+$('bLogin').onclick=async()=>{
+  $('lmsg').textContent='';
+  const email=emailMode?$('em').value.trim():DEV_EMAIL;
+  try{ await auth.signInWithEmailAndPassword(email, $('pw').value); }
+  catch(e){
+    const bad=['auth/invalid-credential','auth/wrong-password','auth/invalid-login-credentials','auth/user-not-found','auth/invalid-email'];
+    $('lmsg').textContent=bad.includes(e.code)?'비밀번호(또는 이메일)가 맞지 않아요.':e.code==='auth/too-many-requests'?'시도가 너무 많아요. 잠시 뒤에 다시 해 주세요.':'로그인 실패: '+(e.code||e.message);
+  }
+};
+$('pw').addEventListener('keydown',e=>{ if(e.key==='Enter') $('bLogin').click(); });
+$('bOut').onclick=()=>auth.signOut();
+
+if(auth) auth.onAuthStateChanged(async u=>{
+  if(!u){ $('login').hidden=false; $('app').hidden=true; return; }
+  if(u.isAnonymous){ $('lmsg').textContent='익명 계정은 사용할 수 없어요. 이메일 계정으로 로그인하세요.'; await auth.signOut(); return; }
+  uid=u.uid; isDev=(u.email===DEV_EMAIL && u.emailVerified===true);
+  let isAdm=isDev;
+  if(!isAdm){ try{ isAdm=(await db.ref('hw3/admins/'+uid).get()).val()===true; }catch(e){} }
+  if(!isAdm){ $('lmsg').textContent='어드민 권한이 없는 계정이에요.'; await auth.signOut(); return; }
+  $('login').hidden=true; $('app').hidden=false;
+  $('who').textContent=u.email;
+  const r=$('role'); r.textContent=isDev?'개발자':'어드민'; r.className='tag '+(isDev?'dev':'adm');
+  $('tAdmins').hidden=!isDev; $('devRow').hidden=!isDev;
+  $('bLimit').textContent=isDev?'일 (제한 없음)':'일 (어드민은 최대 7일)';
+  $('bDays').max=isDev?3650:7;
+  openTab('reports');
+});
+
+/* ---------- 탭 ---------- */
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>openTab(b.dataset.t));
+let presRef=null;
+function openTab(t){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  ['reports','users','presence','admins'].forEach(n=>$('p-'+n).hidden=(n!==t));
+  if(presRef){ presRef.off(); presRef=null; }
+  if(t==='reports') loadReports();
+  if(t==='users') loadUsers();
+  if(t==='presence') watchPresence();
+  if(t==='admins') loadAdmins();
+}
+const TYPE={troll:'고의 트롤',abuse:'어뷰징',cheat:'핵',swear:'욕설'};
+
+/* ---------- 신고 ---------- */
+async function loadReports(){
+  const box=$('p-reports'); box.replaceChildren(h('div',{class:'muted'},'불러오는 중…'));
+  try{
+    const snap=await db.ref('hw3/reports').orderByChild('ts').limitToLast(100).get();
+    const list=[]; snap.forEach(c=>{ list.push({id:c.key,...c.val()}); }); list.reverse();
+    const filter=h('select',{},h('option',{value:'all'},'전체'),h('option',{value:'open'},'처리 대기'),h('option',{value:'done'},'처리 완료'),h('option',{value:'dismissed'},'기각'));
+    const table=h('table');
+    const draw=()=>{
+      table.replaceChildren(h('tr',{},...['시간','신고자','대상','유형','내용','상태',''].map(x=>h('th',{},x))));
+      list.filter(r=>filter.value==='all'||(r.status||'open')===filter.value).forEach(r=>{
+        const st=r.status||'open';
+        table.append(h('tr',{},
+          h('td',{},fmt(r.ts)), h('td',{},r.fromKey), h('td',{},h('b',{},r.target)), h('td',{},TYPE[r.type]||r.type), h('td',{},r.text||''),
+          h('td',{},h('span',{class:'tag'},st==='open'?'대기':st==='done'?'완료':'기각')),
+          h('td',{class:'row'},
+            h('button',{class:'r',onclick:()=>{ openTab('users'); setTimeout(()=>{ $('uq').value=r.target; drawUsers(); },400); }},'유저 보기'),
+            h('button',{class:'g',onclick:()=>setReport(r.id,'done')},'완료'),
+            h('button',{class:'x',onclick:()=>setReport(r.id,'dismissed')},'기각'))));
+      });
+    };
+    filter.onchange=draw; draw();
+    box.replaceChildren(h('div',{class:'row'},h('b',{},'신고 목록 (최근 100건)'),filter,h('button',{class:'x',onclick:loadReports},'새로고침')),h('div',{style:'overflow:auto;margin-top:8px'},table));
+  }catch(e){ box.replaceChildren(h('div',{},'불러오지 못했어요: '+e.message)); }
+}
+async function setReport(id,status){
+  try{ await db.ref('hw3/reports/'+id).update({status,handledBy:uid}); note('신고를 처리했어요.'); loadReports(); }
+  catch(e){ note('실패: '+e.message); }
+}
+
+/* ---------- 유저·정지 ---------- */
+async function loadUsers(){
+  $('uTable').replaceChildren(h('tr',{},h('td',{},'불러오는 중…')));
+  try{
+    const [us,bs]=await Promise.all([db.ref('hw3/users').orderByChild('points').limitToLast(300).get(), db.ref('hw3/bans').get()]);
+    users=[]; us.forEach(c=>{ users.push(c.val()); }); users.reverse();
+    bansMap=bs.val()||{};
+    drawUsers();
+  }catch(e){ $('uTable').replaceChildren(h('tr',{},h('td',{},'불러오지 못했어요: '+e.message))); }
+}
+const banLeft=k=>{ const b=bansMap[k]; if(!b) return 0; return Math.max(0,b.ts+b.days*DAY-Date.now()); };
+function drawUsers(){
+  const q=$('uq').value.trim().toLowerCase(), t=$('uTable');
+  t.replaceChildren(h('tr',{},...['닉네임','레벨','점수','전적','킬/데스/어시','정지','권한',''].map(x=>h('th',{},x))));
+  users.filter(u=>!q||u.key.includes(q)).forEach(u=>{
+    const left=banLeft(u.key);
+    t.append(h('tr',{},
+      h('td',{},h('b',{},u.name),h('span',{class:'muted'},'#'+u.num)),
+      h('td',{},u.level), h('td',{},u.points||0), h('td',{},`${u.wins}승 ${u.losses}패`), h('td',{},`${u.kills}/${u.deaths}/${u.assists||0}`),
+      h('td',{},u.bans+'회 ',left?h('span',{class:'tag ban'},Math.ceil(left/DAY)+'일 남음'):''),
+      h('td',{},u.admin?h('span',{class:'tag adm'},'어드민'):''),
+      h('td',{},h('button',{onclick:()=>pick(u)},'선택'))));
+  });
+}
+$('uq').oninput=drawUsers; $('uRefresh').onclick=loadUsers;
+function pick(u){
+  sel=u; $('uSel').hidden=false; $('uSelName').textContent=u.name+'#'+u.num;
+  const left=banLeft(u.key);
+  $('uSelInfo').textContent=`정지 ${u.bans}회${left?` · 현재 정지 중 (${Math.ceil(left/DAY)}일 남음)`:''}`;
+  $('pts').value=u.points||0;
+  $('uSel').scrollIntoView({block:'nearest'});
+}
+$('bBan').onclick=async()=>{
+  if(!sel) return;
+  const days=Number($('bDays').value), max=isDev?3650:7;
+  if(!Number.isInteger(days)||days<1||days>max) return note(`정지 일수는 1~${max}일의 정수예요.`);
+  const reason=($('bReason').value.trim()||'사유 없음').slice(0,100);
+  if(!confirm(`${sel.name}님을 ${days}일 정지할까요?`)) return;
+  try{
+    await db.ref('hw3').update({['bans/'+sel.key]:{days,ts:ST,reason,by:uid}, ['users/'+sel.key+'/bans']:(sel.bans||0)+1});
+    note('정지했어요.'); await loadUsers(); pick(users.find(u=>u.key===sel.key)||sel);
+  }catch(e){ note('실패: '+e.message); }
+};
+$('bUnban').onclick=async()=>{
+  if(!sel) return;
+  try{ await db.ref('hw3/bans/'+sel.key).remove(); note('정지를 해제했어요.'); await loadUsers(); pick(users.find(u=>u.key===sel.key)||sel); }
+  catch(e){ note('실패: '+e.message); }
+};
+$('bKick').onclick=async()=>{
+  if(!sel) return;
+  if(!confirm(`${sel.name}님을 추방할까요? (현재 경기에서 내보내기)`)) return;
+  try{ await db.ref('hw3/kicks/'+sel.uid).set({ts:ST,by:uid,reason:($('bReason').value.trim()||'추방').slice(0,100)}); note('추방 신호를 보냈어요.'); }
+  catch(e){ note('실패: '+e.message); }
+};
+$('bGrant').onclick=async()=>{
+  if(!sel||!isDev) return;
+  try{ await db.ref('hw3').update({['admins/'+sel.uid]:true,['users/'+sel.key+'/admin']:true}); note('어드민을 부여했어요.'); await loadUsers(); }
+  catch(e){ note('실패: '+e.message); }
+};
+$('bRevoke').onclick=async()=>{
+  if(!sel||!isDev) return;
+  try{ await db.ref('hw3').update({['admins/'+sel.uid]:null,['users/'+sel.key+'/admin']:false}); note('어드민을 해제했어요.'); await loadUsers(); }
+  catch(e){ note('실패: '+e.message); }
+};
+$('bPts').onclick=async()=>{
+  if(!sel||!isDev) return;
+  const n=Number($('pts').value);
+  if(!Number.isInteger(n)||n<0) return note('점수는 0 이상의 정수예요.');
+  try{ await db.ref('hw3/users/'+sel.key+'/points').set(n); note('점수를 수정했어요.'); await loadUsers(); }
+  catch(e){ note('실패: '+e.message); }
+};
+
+/* ---------- 접속 현황 ---------- */
+function watchPresence(){
+  const box=$('p-presence'); presRef=db.ref('hw3/presence');
+  presRef.on('value',snap=>{
+    const rows=[]; snap.forEach(c=>{ rows.push({uid:c.key,...c.val()}); });
+    const ST_KO={lobby:'로비',match:'경기 중',tutorial:'튜토리얼'};
+    const t=h('table',{},h('tr',{},...['닉네임','상태','마지막 갱신'].map(x=>h('th',{},x))),
+      ...rows.map(r=>h('tr',{},h('td',{},r.name),h('td',{},ST_KO[r.state]||r.state),h('td',{},fmt(r.ts)))));
+    box.replaceChildren(h('b',{},`접속 중 ${rows.length}명 (실시간)`),h('div',{style:'overflow:auto;margin-top:8px'},t));
+  },e=>box.replaceChildren(h('div',{},'불러오지 못했어요: '+e.message)));
+}
+
+/* ---------- 어드민 목록 (개발자 전용) ---------- */
+async function loadAdmins(){
+  const box=$('p-admins');
+  try{
+    const snap=await db.ref('hw3/admins').get(); const list=[]; snap.forEach(c=>{ list.push(c.key); });
+    const nameOf=id=>{ const u=users.find(x=>x.uid===id); return u?u.name+'#'+u.num:'(유저 목록을 불러오면 이름이 보여요)'; };
+    box.replaceChildren(h('b',{},`어드민 ${list.length}명`),
+      h('table',{},h('tr',{},h('th',{},'닉네임'),h('th',{},'UID'),h('th',{},'')),
+        ...list.map(id=>h('tr',{},h('td',{},nameOf(id)),h('td',{class:'muted'},id),
+          h('td',{},h('button',{class:'x',onclick:async()=>{ try{ await db.ref('hw3/admins/'+id).remove(); note('해제했어요.'); loadAdmins(); }catch(e){ note('실패: '+e.message); } }},'해제'))))),
+      h('div',{class:'muted',style:'margin-top:8px'},'새 어드민은 "유저·정지" 탭에서 유저를 선택해 부여하세요.'));
+  }catch(e){ box.replaceChildren(h('div',{},'불러오지 못했어요: '+e.message)); }
+}
+</script>
+</body>
+</html>
